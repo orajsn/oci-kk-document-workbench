@@ -1,0 +1,221 @@
+{
+  "source_sha256": "4fc3dcd3f3b33f507e82594beef3fdbbf00bc3f386387a8086e605074e28f865",
+  "extraction": {
+    "schema_version": "1.0",
+    "layout_family": "modern",
+    "household": {
+      "kk_number_raw": null,
+      "form_serial": null,
+      "head_name": "ALFA",
+      "address": null,
+      "rt": null,
+      "rw": null,
+      "village": null,
+      "district": null,
+      "regency_city": null,
+      "province": null,
+      "postal_code": null,
+      "issued_date_raw": null
+    },
+    "members": [
+      {
+        "row_number": 1,
+        "full_name": "ALFA",
+        "nik_raw": "0000000101000001",
+        "sex": "L",
+        "birth_place": null,
+        "birth_date_raw": "01-01-2000",
+        "religion": null,
+        "education": null,
+        "occupation": null,
+        "blood_group": null,
+        "marital_status": null,
+        "marriage_date_raw": null,
+        "relationship_to_head": null,
+        "nationality": null,
+        "passport_number": null,
+        "residence_permit_number": null,
+        "father_name": null,
+        "mother_name": null,
+        "combined_parent_name": null
+      }
+    ],
+    "field_evidence": [
+      {
+        "path": "household.kk_number_raw",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.form_serial",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.head_name",
+        "status": "READABLE",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.address",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.rt",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.rw",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.village",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.district",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.regency_city",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.province",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.postal_code",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "household.issued_date_raw",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card"
+      },
+      {
+        "path": "members[0].row_number",
+        "status": "READABLE",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].full_name",
+        "status": "READABLE",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].nik_raw",
+        "status": "READABLE",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].sex",
+        "status": "READABLE",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].birth_place",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].birth_date_raw",
+        "status": "READABLE",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].religion",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].education",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].occupation",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].blood_group",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].marital_status",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].marriage_date_raw",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].relationship_to_head",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].nationality",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].passport_number",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].residence_permit_number",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].father_name",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].mother_name",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      },
+      {
+        "path": "members[0].combined_parent_name",
+        "status": "NOT_PRESENT_IN_LAYOUT",
+        "section": "Synthetic training card",
+        "row_number": 1
+      }
+    ],
+    "review_flags": []
+  }
+}

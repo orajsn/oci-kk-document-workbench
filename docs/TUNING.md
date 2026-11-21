@@ -32,3 +32,5 @@ python examples/score_documents.py --reference examples/synthetic-reference.json
 ```
 
 Fixture memuat satu KK fiktif, 12 field keluarga dan 18 field per anggota. Pada dua anggota ada 48 slot. Contoh prediksi sengaja salah pada satu field: 47/48 match dan 0/1 dokumen cocok penuh. Sediakan satu referensi dan prediksi per ID dokumen dengan SHA-256 sumber yang sama. Status per field adalah `readable`, `blank`, `absent` atau `unknown`. Tanggal dan karakter sumber mengikuti `normalized()`; tandai perubahan kebijakan perbandingan sebelum memakai angka pada rilis berbeda. File harus tetap memuat field kosong dengan nilai JSON null. Jalankan evaluator setelah keluaran dikunci. Kunci jawaban tidak diperlukan oleh aplikasi ekstraksi.
+
+Untuk latihan dengan record yang benar-benar sudah diunggah, ikuti [satu batch, satu koreksi dan satu eksperimen NIK](DAY-ONE.md). Checker membaca snapshot sebelum koreksi dan memakai kunci cetakan hanya untuk menilai hasil. Jumlah usulan baca ulang dan jumlah keputusan petugas diukur pada tahap berbeda.

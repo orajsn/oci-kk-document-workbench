@@ -2,26 +2,11 @@
 
 Ekstraksi Kartu Keluarga dari gambar menjadi record rumah tangga dan baris anggota. Aplikasi menyediakan bulk upload, penyimpanan sumber, antrean ekstraksi dan pemeriksaan NIK per anggota. Ketika satu angka sulit dibaca, petugas dapat membuka crop, membandingkannya dengan nilai AI, lalu mencatat keputusan secara terpisah.
 
-## Coba di laptop
+## Mulai dari nol
 
-Gunakan Python 3.11+. Mode demo memakai SQLite dan tidak memerlukan credential OCI.
+Ikuti [latihan bulk upload, review, dan tuning satu NIK](docs/DAY-ONE.md). Anda membutuhkan Python 3.11+ dan browser. Dua gambar fiktif sudah tersedia. Setelah satu digit dikoreksi dan server direstart, Anda dapat membuka kembali nilai awal dan keputusan petugas, lalu membandingkan tiga ambang baca ulang pada batch yang sama. Latihan dapat dijalankan dari clone Git atau folder `portable-edition` di paket serah terima privat.
 
-```sh
-python run_local.py --port 8765 --data-dir runtime
-```
-
-1. Buka `http://127.0.0.1:8765`, pilih **Upload KK Images**, isi case ID dan pilih **Synthetic Demo**.
-2. Unggah [gambar contoh](demo/synthetic-kk.png). Buka hasil keluarga dan anggota, lakukan review, lalu buka ulang record. Demo memakai keluaran fiktif tetap untuk menguji alur.
-3. Untuk mencoba persis interaksi review sebuah field tanpa database cloud, buka [simulasi HTML](demo/field-review.html) dari clone lokal. Simulator ini menggunakan gambar buatan sendiri dan menyimpan keputusan di browser.
-4. Coba perubahan ambang OCR pada [lab tuning](examples/tuning_lab.py). Perintah ini membandingkan dua kebijakan pada data sintetis.
-
-```sh
-python examples/tuning_lab.py --compare 0.80 0.90
-python examples/score_documents.py --reference examples/synthetic-reference.json --predictions examples/synthetic-prediction.json
-python -m unittest discover -s tests -p "test_backend_*.py"
-```
-
-Untuk suite lengkap termasuk fixture citra, siapkan virtual environment dan instal `requirements-test.txt`, lalu jalankan `python -m unittest discover -s tests`. Test preprocessing berbasis OpenCV akan dilewati bila library opsionalnya tidak ada.
+Untuk pemeriksaan backend, jalankan `python -m unittest discover -s tests -p "test_backend_*.py"`. Untuk suite lengkap, instal `requirements-test.txt` pada virtual environment dan jalankan `python -m unittest discover -s tests`. Pengujian preprocessing yang memerlukan OpenCV bersifat opsional.
 
 ## Arsitektur deployment OCI
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.0 · 2026-11-21
+
+Tambahkan latihan penerima dari dua gambar ke dua job, koreksi satu NIK, restart, audit versi dan pembandingan ambang routing pada batch yang diunggah. Pembacaan sintetis, sinyal OCR dan kunci cetakan disimpan terpisah. Jalur lokal memakai SQLite dan Python standard library. Default routing tetap 0,90. Paket privat memuat edisi portabel lengkap agar latihan dapat diikuti secara offline.
+
 ## 0.2.0 · 2026-11-21
 
 Tambahkan evaluasi semua field per dokumen. Hasil meliputi slot terbaca, kosong atau tidak berlaku, perbedaan, acuan ambigu dan KK yang cocok penuh. Fixture sintetis menunjukkan dampak satu field yang salah pada skor satu dokumen.

@@ -24,3 +24,7 @@ dist/
 !demo/synthetic-kk.png
 *.pptx
 *.pdf
+
+# Two authored synthetic training cards
+!demo/day-one/kartu-a.png
+!demo/day-one/kartu-b.png
