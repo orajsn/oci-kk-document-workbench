@@ -17,7 +17,7 @@ function inFilter(c){
 }
 function sidebar(){
  $('cohort').textContent=cases.length+' NIK · '+new Set(cases.map(c=>c.doc)).size+' KK';
- $('count').textContent=decisions.size+' dari '+cases.length+' sudah diperiksa';$('bar').max=cases.length;$('bar').value=decisions.size;
+ $('count').textContent=decisions.size+' dari '+cases.length+' sudah diperiksa';$('bar').max=Math.max(1,cases.length);$('bar').value=decisions.size;
  const q=$('queue');q.replaceChildren();
  cases.filter(inFilter).forEach(c=>{const b=document.createElement('button');b.type='button';b.dataset.id=c.id;b.setAttribute('aria-current',String(c===current));const d=decisions.get(c.key);
  b.append(node('b',c.doc+' · Baris '+c.row),node('small',c.topic+' · '+(d?labels[d.action]:'Belum diperiksa')));b.onclick=()=>show(c);q.append(b)});
@@ -26,14 +26,14 @@ function sidebar(){
 function zoom(){const factor=Number($('zoom').value);$('photo').style.width=(current.width*factor)+'px';
  $('amount').textContent=factor.toLocaleString('id-ID')+'×';$('zoom').setAttribute('aria-valuetext',$('amount').textContent);$('native').hidden=factor===1;}
 function show(c){
- current=c;sidebar();$('panel').hidden=!c;if(!c)return;
+ current=c;sidebar();$('panel').hidden=!c;$('empty-detail').hidden=!!c;if(!c)return;
  $('title').textContent=c.doc+' · Anggota baris '+c.row;$('topic').textContent=c.topic;$('why').replaceChildren(...c.reasons.map(t=>node('li',t)));
  $('photo').src=c.image;$('small').src=c.image;$('small').width=c.width;$('ctximg').src=c.context;$('ctx').open=false;
  $('zoom').value=1;zoom();$('frame').scrollLeft=0;$('stored').textContent=c.stored;
  $('form').hidden=true;$('actions').hidden=false;$('error').textContent='';$('entry').removeAttribute('aria-invalid');
  const d=decisions.get(c.key);openedVersion=c.revision;$('last').hidden=!d;$('last').replaceChildren();
  if(d){$('last').append(node('strong',labels[d.action]),node('p',d.action==='unreadable'?'Perlu foto yang lebih jelas.':d.action==='correct'?'Nilai koreksi: '+d.value:'Nilai tersimpan sesuai cetakan.'));
- $('last').append(node('small','Tersimpan di Oracle · '+d.operator+' · '+new Date(d.time).toLocaleString('id-ID')));
+ $('last').append(node('small','Dicatat oleh '+d.operator+' · '+new Date(d.time).toLocaleString('id-ID')));
  if(c.structural&&d.action!=='unreadable')$('last').append(node('small','Konfirmasi cetakan tercatat. Konsistensi data identitas perlu dicek terpisah.'))}
 }
 function chooseFiltered(){const list=cases.filter(inFilter);show(list.includes(current)?current:list[0]);}
@@ -44,12 +44,12 @@ function lock(on){
 async function persist(action,value){
  const c=current;if(!c||busy)return;const rev=openedVersion;const signature=JSON.stringify([c.key,rev,action,value??null]);
  if(!pendingRequest||pendingRequest.signature!==signature)pendingRequest={signature,id:crypto.randomUUID()};
- lock(true);$('notice').textContent='Menyimpan ke Oracle Database…';
+ lock(true);$('notice').textContent='Menyimpan keputusan…';
  try{
   await api('/api/nik-review/'+c.key+'/decision',{method:'POST',headers:{'Content-Type':'application/json','X-KK-Pilot-Token':csrf},body:JSON.stringify({action,value:value??null,expected_revision:rev,request_id:pendingRequest.id})});
   await refresh();pendingRequest=null;
   const list=cases.filter(inFilter);show(list.find(x=>!decisions.has(x.key))??list.find(x=>x.key===c.key)??list[0]);
-  $('notice').textContent=c.doc+' baris '+c.row+' · '+labels[action]+' tersimpan di Oracle.'+(decisions.size===cases.length?' Semua kasus sudah diperiksa.':'');if(current)$('title').focus();
+  $('notice').textContent=c.doc+' baris '+c.row+' · '+labels[action]+' tersimpan.'+(decisions.size===cases.length?' Semua kasus sudah diperiksa.':'');if(current)$('title').focus();
  }catch(e){
   if(e.status===409){await refresh();show(cases.find(x=>x.key===c.key));pendingRequest=null}
   $('notice').textContent=e.status?e.message:'Status simpan belum terkonfirmasi. Coba kembali dengan keputusan yang sama.';

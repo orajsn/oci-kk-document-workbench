@@ -356,9 +356,9 @@ class Repository:
             # instr is literal, so percent/underscore do not become SQL wildcards.
             where.append("(instr(lower(case_id),lower(?))>0 OR instr(lower(filename),lower(?))>0 OR instr(id,?)>0)")
             params.extend((query, query, query))
-        sql = "SELECT * FROM jobs" + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY created_at DESC,id DESC LIMIT 500"
+        sql = "SELECT *, json_array_length(extraction_json, '$.members') AS member_count FROM jobs" + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY created_at DESC,id DESC LIMIT 500"
         with self._connection() as connection:
-            return [self._summary(row) for row in connection.execute(sql, params)]
+            return [{**self._summary(row), "member_count": row["member_count"]} for row in connection.execute(sql, params)]
 
     def claim_job(self, lease_seconds: float = 120) -> dict | None:
         now, timestamp = time.time(), _utc()

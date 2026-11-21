@@ -1,12 +1,25 @@
-# KK Document Workbench for OCI
+# Ruang Dokumen KK
 
-Ekstraksi Kartu Keluarga dari gambar menjadi record rumah tangga dan baris anggota. Aplikasi menyediakan bulk upload, penyimpanan sumber, antrean ekstraksi dan pemeriksaan NIK per anggota. Ketika satu angka sulit dibaca, petugas dapat membuka crop, membandingkannya dengan nilai AI, lalu mencatat keputusan secara terpisah.
+Unggah foto kartu keluarga, buka hasil per anggota, lalu cocokkan angka yang meragukan dengan cetakannya. Petugas dapat menyimpan koreksi dan membuka kembali nilai awal.
 
-## Mulai dari nol
+## Coba di laptop
 
-Ikuti [latihan bulk upload, review, dan tuning satu NIK](docs/DAY-ONE.md). Anda membutuhkan Python 3.11+ dan browser. Dua gambar fiktif sudah tersedia. Setelah satu digit dikoreksi dan server direstart, Anda dapat membuka kembali nilai awal dan keputusan petugas, lalu membandingkan tiga ambang baca ulang pada batch yang sama. Latihan dapat dijalankan dari clone Git atau folder `portable-edition` di paket serah terima privat.
+**Lihat pemeriksaan NIK.** Buka [contoh interaktif](demo/field-review.html) dari folder hasil unduhan di browser. Dua berkas fiktif sudah tersedia. Pilih **Buka hasil → Periksa NIK anggota ini** untuk membandingkan gambar dan hasil pembacaan. Keputusan latihan disimpan di browser tersebut.
 
-Untuk pemeriksaan backend, jalankan `python -m unittest discover -s tests -p "test_backend_*.py"`. Untuk suite lengkap, instal `requirements-test.txt` pada virtual environment dan jalankan `python -m unittest discover -s tests`. Pengujian preprocessing yang memerlukan OpenCV bersifat opsional.
+**Coba bulk upload.** Dengan Python 3.11 atau lebih baru, jalankan perintah berikut dari folder repo:
+
+```sh
+python run_local.py --port 8876 --data-dir runtime/day-one --reference-dir demo/day-one/reader
+```
+
+Buka [Ruang Dokumen lokal](http://127.0.0.1:8876). Pilih **Unggah KK**, isi **Nomor referensi**, pilih **Rekaman latihan**, lalu unggah kedua PNG dari `demo/day-one/`. Buka satu hasil dan pilih tab **Anggota**. Untuk mencoba koreksi, restart dan tuning pada batch yang sama, ikuti [latihan penerima](docs/DAY-ONE.md).
+
+## Untuk engineer
+
+- [Instalasi OCI dan rollback](docs/OPERATIONS.md)
+- [Uji penerimaan di Oracle Database](docs/HANDOVER.md)
+- [Tuning OCR, prompt dan pemicu baca ulang NIK](docs/TUNING.md)
+- [Riwayat rilis](CHANGELOG.md)
 
 ## Arsitektur deployment OCI
 
@@ -27,7 +40,7 @@ flowchart LR
     D --> UI[UI: crop, nilai asli dan keputusan]
 ```
 
-Entry point contoh memakai OCI Batam. Rute on-demand contoh menargetkan Chicago dengan pemrosesan Gemini di Google Americas. Pemilik deployment memasok, memverifikasi dan menyetujui profile sendiri. API cloud bind ke loopback dan dirancang untuk diakses melalui tunnel privat. Identitas operator di pilot mengikuti identitas SSH terkonfigurasi; akses multi-petugas produksi membutuhkan autentikasi per pengguna.
+Pada konfigurasi contoh, aplikasi menerima unggahan di OCI Batam. Rute on-demand contoh menargetkan Chicago dengan pemrosesan Gemini di Google Americas. Pemilik deployment memasok, memverifikasi dan menyetujui profile sendiri. API cloud bind ke loopback dan dirancang untuk diakses melalui tunnel privat. Identitas operator di pilot mengikuti identitas SSH terkonfigurasi; akses multi-petugas produksi membutuhkan autentikasi per pengguna.
 
 ## Titik tuning
 
@@ -39,12 +52,6 @@ Entry point contoh memakai OCI Batam. Rute on-demand contoh menargetkan Chicago 
 
 Panduan [tuning dan evaluasi](docs/TUNING.md) menjelaskan file serta fungsi yang mengendalikan tiap tahap. Model Gemini dipanggil lewat layanan terkelola. Perubahan di sini memengaruhi input, instruksi, validasi dan routing. Bobot model tidak dilatih oleh aplikasi.
 
-## Untuk tim penerima
-
-- [Runbook instalasi, layanan dan rollback](docs/OPERATIONS.md)
-- [Checklist serah terima dan uji penerimaan](docs/HANDOVER.md)
-- [Riwayat perubahan](CHANGELOG.md)
-
 | Direktori | Isi |
 |---|---|
 | `kkpilot/`, `web/` | API, UI, worker, kontrak model, pipeline OCR dan penyimpanan |
@@ -53,4 +60,8 @@ Panduan [tuning dan evaluasi](docs/TUNING.md) menjelaskan file serta fungsi yang
 | `deploy/`, `infra/` | Unit systemd, contoh environment dan Terraform yang dinonaktifkan secara default |
 | `tests/`, `examples/`, `demo/` | Pemeriksaan lokal dan contoh sintetis |
 
-Repo publik memakai konfigurasi kosong untuk resource tenancy dan profil crop. Buat konfigurasi privat milik penerima sebelum live. Foto keluarga asli, OCR response, evaluator berisi data pribadi, wallet, state Terraform dan deck customer disimpan di luar repo.
+Untuk deployment, masukkan resource tenancy dan profil crop ke konfigurasi privat. Simpan gambar asli, respons OCR, wallet dan state Terraform di lingkungan penerima.
+
+## Menjalankan tes
+
+Tes backend dapat dijalankan dengan `python -m unittest discover -s tests -p "test_backend_*.py"`. Untuk suite lengkap, pasang `requirements-test.txt` di virtual environment lalu jalankan `python -m unittest discover -s tests`.
