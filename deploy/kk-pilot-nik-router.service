@@ -1,0 +1,19 @@
+[Unit]
+Description=KK post-commit NIK review router
+After=network-online.target kk-pilot-api.service
+[Service]
+Type=oneshot
+User=kkpilot
+Group=kkpilot
+EnvironmentFile=/etc/kk-pilot/runtime.env
+Environment=PYTHONPATH=/opt/kk-pilot/current:/opt/kk-pilot/venv/lib/python3.11/site-packages
+ExecStart=/opt/kk-pilot/venv/bin/python -B /opt/kk-pilot/nik-router/current/service.py
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/kk-pilot/bulk-nik-router
+MemoryMax=1G
+CPUQuota=100%
+TimeoutStartSec=15min

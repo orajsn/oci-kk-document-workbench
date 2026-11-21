@@ -1,0 +1,7 @@
+# Separate OCR environment on the worker.
+paddleocr==3.2.0
+paddlepaddle==3.2.0
+paddlex==3.2.0
+Pillow==13.0.0
+numpy==2.2.6
+opencv-python-headless==5.0.0.93

@@ -1,0 +1,366 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:kk:kk-extraction:1.0",
+  "title": "KK extraction draft",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "layout_family",
+    "household",
+    "members",
+    "field_evidence",
+    "review_flags"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "layout_family": {
+      "enum": [
+        "modern",
+        "legacy",
+        "unknown"
+      ]
+    },
+    "household": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kk_number_raw",
+        "form_serial",
+        "head_name",
+        "address",
+        "rt",
+        "rw",
+        "village",
+        "district",
+        "regency_city",
+        "province",
+        "postal_code",
+        "issued_date_raw"
+      ],
+      "properties": {
+        "kk_number_raw": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "form_serial": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "head_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "address": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "rt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "rw": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "village": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "district": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "regency_city": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "province": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "postal_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "issued_date_raw": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        }
+      }
+    },
+    "members": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "row_number",
+          "full_name",
+          "nik_raw",
+          "sex",
+          "birth_place",
+          "birth_date_raw",
+          "religion",
+          "education",
+          "occupation",
+          "blood_group",
+          "marital_status",
+          "marriage_date_raw",
+          "relationship_to_head",
+          "nationality",
+          "passport_number",
+          "residence_permit_number",
+          "father_name",
+          "mother_name",
+          "combined_parent_name"
+        ],
+        "properties": {
+          "row_number": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "full_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "nik_raw": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "sex": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "birth_place": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "birth_date_raw": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "religion": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "education": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "occupation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "blood_group": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "marital_status": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "marriage_date_raw": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "relationship_to_head": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "nationality": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "passport_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "residence_permit_number": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "father_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "mother_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "combined_parent_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          }
+        }
+      }
+    },
+    "field_evidence": {
+      "type": "array",
+      "maxItems": 5000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "status",
+          "section"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "status": {
+            "enum": [
+              "READABLE",
+              "BLANK_ON_DOCUMENT",
+              "UNREADABLE",
+              "CROPPED",
+              "NOT_PRESENT_IN_LAYOUT",
+              "AMBIGUOUS",
+              "NOT_REVIEWED"
+            ]
+          },
+          "section": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "row_number": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
+    },
+    "review_flags": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      }
+    }
+  }
+}

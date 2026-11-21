@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+runtime/
+private/
+diagnostics/
+*.private.*
+.env
+*.sqlite*
+*.pem
+*.p12
+*.sso
+*.tfstate*
+.terraform/
+*.tfvars
+wallet/
+dist/
+
+# Source images belong in private runtime storage
+*.jpg
+*.jpeg
+*.png
+!demo/synthetic-kk.png
+*.pptx
+*.pdf

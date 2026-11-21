@@ -1,0 +1,47 @@
+# Example inputs only. Nothing is enabled, and these placeholders are not OCIDs.
+# Copy outside the distributed package to an approved private deployment workspace.
+enable_deployment       = false
+billable_deployment_ack = ""
+region                  = "ap-batam-1"
+name_prefix             = "kk-pilot"
+compartment_id          = ""
+object_storage_namespace = ""
+
+# Confirm actual tenancy values and capacity; do not infer them from a catalogue.
+availability_domain         = ""
+fault_domains               = ["FAULT-DOMAIN-1", "FAULT-DOMAIN-2"]
+compute_shape               = ""
+compute_image_id            = ""
+capacity_and_image_verified = false
+ssh_public_key              = ""
+
+# Review overlap with KK routes before allocation.
+vcn_cidr        = "10.76.0.0/16"
+app_subnet_cidr = "10.76.10.0/24"
+db_subnet_cidr  = "10.76.20.0/24"
+lb_subnet_cidr  = "10.76.30.0/24"
+
+# Private HTTPS by default; an empty allowlist admits no clients.
+ingress_cidrs           = []
+management_cidrs        = []
+public_ingress_enabled  = false
+public_ingress_ack      = ""
+tls_certificate_id     = ""
+lb_minimum_bandwidth_in_mbps = 25
+lb_maximum_bandwidth_in_mbps = 25
+
+# Never attach both SQLite prototype instances to a load balancer.
+enable_backend_registration = false
+shared_runtime_ack          = ""
+
+# Service gateway is regional. Do not assume it reaches every GenAI endpoint.
+# Add only approved endpoint/proxy ranges if NAT is needed.
+enable_nat_egress  = false
+egress_https_cidrs = []
+egress_ack        = ""
+
+adb_admin_secret_id      = ""
+adb_admin_secret_version = 1
+adb_db_name              = "KKPILOT"
+notification_topic_id    = ""
+alarms_enabled           = true

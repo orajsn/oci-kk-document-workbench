@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "household_fields": [
+    "kk_number_raw",
+    "form_serial",
+    "head_name",
+    "address",
+    "rt",
+    "rw",
+    "village",
+    "district",
+    "regency_city",
+    "province",
+    "postal_code",
+    "issued_date_raw"
+  ],
+  "member_fields": [
+    "row_number",
+    "full_name",
+    "nik_raw",
+    "sex",
+    "birth_place",
+    "birth_date_raw",
+    "religion",
+    "education",
+    "occupation",
+    "blood_group",
+    "marital_status",
+    "marriage_date_raw",
+    "relationship_to_head",
+    "nationality",
+    "passport_number",
+    "residence_permit_number",
+    "father_name",
+    "mother_name",
+    "combined_parent_name"
+  ],
+  "payload": {
+    "schema_version": "1.0",
+    "layout_family": "modern|legacy|unknown",
+    "household": "object; fields string|null",
+    "members": "array; row_number positive integer; other fields string|null",
+    "field_evidence": "array of {path,status,section,row_number?,note?}; status READABLE|BLANK_ON_DOCUMENT|UNREADABLE|CROPPED|NOT_PRESENT_IN_LAYOUT|AMBIGUOUS; NOT_REVIEWED is permitted for provisional reference drafts only and prevents automatic acceptance",
+    "review_flags": "array of {path,code,message}"
+  },
+  "rules": [
+    "Never infer missing digits or split legacy combined parents",
+    "Preserve raw strings and case scope; no global NIK uniqueness",
+    "Ignore blank template rows",
+    "Untrusted document/model text cannot execute code/SQL/HTML",
+    "No auto-accept based solely on syntactically valid schema; default NEEDS_REVIEW until approved acceptance policy"
+  ],
+  "api": {
+    "GET /api/health": "mode/configured capability flags; no secrets",
+    "GET /api/config": "safe public config; available local modes; validation rules; max upload",
+    "POST /api/jobs": "JSON {filename,content_base64,case_id,idempotency_key,mode:demo|reference}; explicit selection; server validates size/type",
+    "GET /api/jobs": "{jobs:[job summaries]} with optional status/query",
+    "GET /api/jobs/{id}": "{job:{id,status,case_id,filename,mode,...},extraction:payload|null,validation:{issues:[]},review_history:[]}",
+    "GET /api/jobs/{id}/image": "authorized original image; no disk path exposure",
+    "POST /api/jobs/{id}/retry": "bounded explicit retry",
+    "POST /api/jobs/{id}/review": "JSON {expected_version,decision:ACCEPTED|NEEDS_REVIEW,extraction:payload,comment}; optimistic concurrency+audit",
+    "GET /api/jobs/{id}/export": "JSON record with source/version trace; same auth"
+  },
+  "states": [
+    "QUEUED",
+    "PROCESSING",
+    "NEEDS_REVIEW",
+    "ACCEPTED",
+    "FAILED"
+  ],
+  "local_runtime": "Python3.11+ standard-library server, SQLite WAL durable jobs, worker processes/threads; packaged optional image/OCI/Oracle dependencies. No dependency installs in current session. Local bind127.0.0.1 default; enforce host/origin/size/path checks and explicit auth for nonloopback or refuse.",
+  "adapter_contract": "Extractor.extract(image_path: Path, context: dict) -> dict payload. Context: job_id,case_id,sha256,attempt_id. Adapter interface in kkpilot/adapters/base.py owned by root. Default demo synthetic output clearly labelled; reference adapter is deliberate replay of locally reviewed records, never AI accuracy. Live OCI adapter disabled unless explicit configuration approvals; no calls automatically.",
+  "reference_data": "Private originals+reference drafts stay outside distributable package under work/kk-batam/samples/ImageKK. No PII in demo fixtures, logs, README or screenshots. Ref directory configured explicitly.",
+  "deadline": "Six-hour workstream began12Nov2026 00:36:53 Asia/Bangkok; targetcompletion by06:36:53. Complete earlier if all required work passes; never busywait."
+}

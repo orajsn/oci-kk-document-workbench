@@ -1,0 +1,41 @@
+[Unit]
+Description=KK pilot API and private reviewer UI
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/etc/kk-pilot/cloud.json
+ConditionPathExists=/etc/kk-pilot/runtime.env
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=kkpilot
+Group=kkpilot
+WorkingDirectory=/opt/kk-pilot/current
+EnvironmentFile=/etc/kk-pilot/runtime.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=TMPDIR=/var/lib/kk-pilot/tmp
+ExecStart=/opt/kk-pilot/venv/bin/python -m kkpilot.cloud.serve web --config /etc/kk-pilot/cloud.json --execute --reviewer-identity ${KK_CLOUD_REVIEWER_IDENTITY}
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=150
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/kk-pilot
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kk-pilot-api
+
+[Install]
+WantedBy=multi-user.target

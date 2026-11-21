@@ -1,0 +1,9 @@
+[Unit]
+Description=Check newly committed KK uploads for NIK review
+[Timer]
+OnBootSec=15s
+OnUnitInactiveSec=10s
+AccuracySec=1s
+Unit=kk-pilot-nik-router.service
+[Install]
+WantedBy=timers.target

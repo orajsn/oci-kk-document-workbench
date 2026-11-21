@@ -1,0 +1,29 @@
+#cloud-config
+# Staging only. No downloads, package installs, credentials, service start or AI calls.
+package_update: false
+package_upgrade: false
+users:
+  - default
+  - name: kkpilot
+    system: true
+    lock_passwd: true
+    shell: /usr/sbin/nologin
+    homedir: /var/lib/kk-pilot
+write_files:
+  - path: /etc/kk-pilot/DEPLOYMENT-HOLD.txt
+    owner: root:root
+    permissions: '0600'
+    content: |
+      KK pilot infrastructure staging only.
+      Stage approved artifacts under /opt/kk-pilot/current.
+      Python 3.11+ and optional dependencies require separate authorized installation.
+      Follow docs/deployment-runbook.md and bootstrap/ instructions.
+      The local SQLite/filesystem prototype is SINGLE NODE.
+      Do not start two services or attach LB backends until shared adapters and auth pass.
+      Keep secrets out of source, Terraform variables/state and cloud-init metadata.
+      An operator may later create /etc/kk-pilot/runtime.env with mode 0600.
+      No service is started or enabled by this cloud-init.
+runcmd:
+  - [install, -d, -m, '0755', -o, root, -g, root, /opt/kk-pilot/current]
+  - [install, -d, -m, '0700', -o, kkpilot, -g, kkpilot, /var/lib/kk-pilot]
+  - [install, -d, -m, '0700', -o, root, -g, root, /etc/kk-pilot]
