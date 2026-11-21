@@ -1,0 +1,66 @@
+{
+  "example-card": {
+    "source_sha256": "4972a32c5f8fed34fd4e36ae1584806726059458f3051c0fadc365c1ca2275de",
+    "extraction": {
+      "layout_family": "legacy",
+      "household": {
+        "kk_number_raw": "DEMO-HOUSEHOLD",
+        "form_serial": null,
+        "head_name": "SYNTHETIC PERSON A",
+        "address": "FICTIONAL DEMONSTRATION ADDRESS",
+        "rt": null,
+        "rw": null,
+        "village": null,
+        "district": null,
+        "regency_city": null,
+        "province": null,
+        "postal_code": null,
+        "issued_date_raw": null
+      },
+      "members": [
+        {
+          "row_number": 1,
+          "full_name": "SYNTHETIC PERSON A",
+          "nik_raw": "DEMO-MEMBER-1",
+          "sex": null,
+          "birth_place": null,
+          "birth_date_raw": null,
+          "religion": null,
+          "education": null,
+          "occupation": null,
+          "blood_group": null,
+          "marital_status": null,
+          "marriage_date_raw": null,
+          "relationship_to_head": "KEPALA KELUARGA",
+          "nationality": null,
+          "passport_number": null,
+          "residence_permit_number": null,
+          "father_name": null,
+          "mother_name": null,
+          "combined_parent_name": null
+        },
+        {
+          "row_number": 2,
+          "full_name": "SYNTHETIC PERSON B",
+          "nik_raw": "DEMO-MEMBER-X",
+          "sex": null,
+          "birth_place": null,
+          "birth_date_raw": null,
+          "religion": null,
+          "education": null,
+          "occupation": null,
+          "blood_group": null,
+          "marital_status": null,
+          "marriage_date_raw": null,
+          "relationship_to_head": "ANAK",
+          "nationality": null,
+          "passport_number": null,
+          "residence_permit_number": null,
+          "father_name": null,
+          "mother_name": null,
+          "combined_parent_name": null
+        }
+      ]
+    }
+  }
+}

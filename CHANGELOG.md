@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.0 · 2026-11-21
+
+Tambahkan evaluasi semua field per dokumen. Hasil meliputi slot terbaca, kosong atau tidak berlaku, perbedaan, acuan ambigu dan KK yang cocok penuh. Fixture sintetis menunjukkan dampak satu field yang salah pada skor satu dokumen.
+
 ## 0.1.0 · 2026-11-21
 
 Rilis handover awal dari workbench bulk dan router review.

@@ -17,6 +17,7 @@ python run_local.py --port 8765 --data-dir runtime
 
 ```sh
 python examples/tuning_lab.py --compare 0.80 0.90
+python examples/score_documents.py --reference examples/synthetic-reference.json --predictions examples/synthetic-prediction.json
 python -m unittest discover -s tests -p "test_backend_*.py"
 ```
 

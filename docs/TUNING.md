@@ -24,3 +24,11 @@ Mulai dari satu field yang salah dan catat letak kegagalannya. Angka yang keliru
 `python examples/tuning_lab.py --compare 0.80 0.90` memanggil classifier yang sama dengan service terhadap data rekaan. Label demonstrasi dipakai sesudah prediksi. Hasil lab menjelaskan trade-off ambang, bukan benchmark performa OCR atau klaim layanan Gemini.
 
 Pada fixture tiga anggota, ambang 0,80 melepaskan satu nomor yang berbeda dari label. Ambang 0,90 menangkapnya dan juga menandai satu bacaan yang sebenarnya benar. Laporkan kedua efek ini saat mengajukan tuning.
+
+### Rekap seluruh KK
+
+```sh
+python examples/score_documents.py --reference examples/synthetic-reference.json --predictions examples/synthetic-prediction.json
+```
+
+Fixture memuat satu KK fiktif, 12 field keluarga dan 18 field per anggota. Pada dua anggota ada 48 slot. Contoh prediksi sengaja salah pada satu field: 47/48 match dan 0/1 dokumen cocok penuh. Sediakan satu referensi dan prediksi per ID dokumen dengan SHA-256 sumber yang sama. Status per field adalah `readable`, `blank`, `absent` atau `unknown`. Tanggal dan karakter sumber mengikuti `normalized()`; tandai perubahan kebijakan perbandingan sebelum memakai angka pada rilis berbeda. File harus tetap memuat field kosong dengan nilai JSON null. Jalankan evaluator setelah keluaran dikunci. Kunci jawaban tidak diperlukan oleh aplikasi ekstraksi.
