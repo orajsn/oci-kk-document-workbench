@@ -8,24 +8,24 @@
 <p>Kalau satu digit NIK salah baca, petugas bisa buka gambar anggota itu, perbesar angkanya, lalu simpan koreksi. Coba dari dua KK fiktif yang sudah tersedia.</p>
 <a class="start" href="Simulasi-Review-NIK.html">Buka demo pemeriksaan NIK</a></div>
 <section aria-labelledby="operator"><h2 id="operator">Cek satu NIK</h2>
-<ol><li>Di <strong>Contoh 02</strong>, pilih <strong>Buka hasil</strong>, lalu <strong>Periksa NIK anggota ini</strong>. Perbesar NIK. Pilih <strong>Lihat seluruh baris anggota</strong> untuk mengecek nama dan angka pada baris yang sama.</li>
+<ol><li>Di <strong>Contoh 02</strong>, pilih <strong>Buka hasil</strong>, lalu <strong>Periksa NIK anggota ini</strong>. Baca alasan di atas gambar. Perbesar NIK, lalu pilih <strong>Lihat seluruh baris anggota</strong> untuk mengecek nama dan angka pada baris yang sama.</li>
 <li>Pilih <strong>Konfirmasi sesuai cetakan</strong> kalau angkanya cocok, <strong>Koreksi NIK</strong> kalau ada digit yang salah, atau <strong>Masih tidak terbaca</strong> kalau gambarnya belum jelas.</li>
 <li>Kembali ke daftar, lalu buka berkas yang sama. Pilih <strong>Buka keputusan</strong>. Hasil awal dan keputusan tadi tersimpan di browser ini.</li></ol></section>
 <section aria-labelledby="engineering"><h2 id="engineering">Upload dua KK sekaligus di laptop</h2>
-<p><a href="https://github.com/orajsn/oci-kk-document-workbench/archive/refs/tags/v0.4.1.zip">Unduh source</a>, ekstrak, lalu buka terminal di folder yang berisi <code>run_local.py</code>. Pakai Python 3.11 atau lebih baru.</p>
+<p><a href="https://github.com/orajsn/oci-kk-document-workbench/archive/refs/tags/v0.4.2.zip">Unduh source</a>, ekstrak, lalu buka terminal di folder yang berisi <code>run_local.py</code>. Pakai Python 3.11 atau lebih baru.</p>
 <pre>python run_local.py --port 8876 --data-dir runtime/day-one --reference-dir demo/day-one/reader</pre>
 <ol><li>Buka <code>http://127.0.0.1:8876</code> di laptop tadi. Klik <strong>Unggah KK</strong>, isi referensi <code>LATIHAN</code> dan pilih <strong>Rekaman latihan</strong>. Dari <code>demo/day-one/</code>, pilih <code>kartu-a.png</code> dan <code>kartu-b.png</code> sekaligus.</li>
 <li>Buka kartu B dan bandingkan NIK baris kedua dengan cetakannya. Simpan koreksinya. Restart server dengan folder data yang sama, lalu buka lagi riwayat kartu B.</li>
 <li>Di terminal kedua, coba ambang baca ulang pada hasil sebelum koreksi.</li></ol>
 <pre>python examples/check_day_one.py --batch LATIHAN --require-review --compare 0.83 0.80</pre>
-<p>Pada contoh ini, ambang 0,90 mengirim dua NIK untuk dibaca ulang. Di 0,83 hanya satu yang dikirim dan digit yang salah masih ketangkap. Di 0,80 digit itu lolos. <a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.1/docs/DAY-ONE.md">Ikuti latihan lengkap dan cocokkan hasilnya</a>.</p></section>
+<p>Pada contoh ini, ambang 0,90 mengirim dua NIK untuk dibaca ulang. Di 0,83 hanya satu yang dikirim dan digit yang salah masih ketangkap. Di 0,80 digit itu lolos. <a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/DAY-ONE.md">Ikuti latihan lengkap dan cocokkan hasilnya</a>.</p></section>
 <section aria-labelledby="technical"><h2 id="technical">Untuk tim yang akan memasang di OCI</h2>
-<p>Latihan di laptop memakai rekaman sintetis dan SQLite. Di Batam, worker membaca gambar lewat model dan menyimpan hasil ke Oracle Database. Source publik v0.4.1 memuat dokumentasi baru untuk aplikasi v0.4.0. Canary R2 diuji terpisah. Aturan awalan seri ada di branch staging.</p>
-<nav aria-label="Panduan engineer"><a href="https://github.com/orajsn/oci-kk-document-workbench/tree/v0.4.1">Repo dan README</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.1/docs/OPERATIONS.md">Instalasi dan rollback</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.1/docs/HANDOVER.md">Cek hasil di Oracle</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.1/docs/TUNING.md">Tuning per field</a>
+<p>Latihan di laptop memakai rekaman sintetis dan SQLite. Di Batam, worker membaca gambar lewat model dan menyimpan hasil ke Oracle Database. Pada v0.4.2, layar pemeriksaan menjelaskan alasan satu NIK perlu dicek dan bagian cetakan yang perlu dicocokkan. Canary R2 diuji terpisah. Aturan awalan seri ada di branch staging.</p>
+<nav aria-label="Panduan engineer"><a href="https://github.com/orajsn/oci-kk-document-workbench/tree/v0.4.2">Repo dan README</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/OPERATIONS.md">Instalasi dan rollback</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/HANDOVER.md">Cek hasil di Oracle</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/TUNING.md">Tuning per field</a>
 <a href="https://github.com/orajsn/oci-kk-document-workbench/tree/f7120e67657812d1e1faece070f3f6aec5552e7b/experiments/form-serial-agreement">Aturan awalan seri dan tesnya</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.1">Catatan rilis</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/download/v0.4.1/FIF-KK-Panduan-Demo.zip">Unduh demo offline</a></nav></section>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.2">Catatan rilis</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/download/v0.4.2/FIF-KK-Panduan-Demo.zip">Unduh demo offline</a></nav></section>
 </main><footer>Untuk demo tanpa internet, ekstrak ZIP lalu buka Mulai-di-sini.html. Tautan ke GitHub memerlukan koneksi internet.</footer></body></html>
