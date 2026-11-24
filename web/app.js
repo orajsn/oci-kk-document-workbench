@@ -485,9 +485,12 @@
         if (info.stage === "previous" && !info.review) return;
         panel.hidden = false;
         if (info.stage === "complete") {
-          text.textContent = "Pemeriksaan NIK selesai · " + info.members + " anggota · " + info.flagged + " ditandai · " + info.cleared + " terkonfirmasi setelah dibaca ulang · " + info.review + " perlu diperiksa.";
+          text.textContent = info.review > 0
+            ? info.review + " NIK masuk antrean petugas. Buka kasus untuk mencocokkan angka dengan cetakan."
+            : "Pemeriksaan NIK selesai. Tidak ada NIK yang masuk antrean petugas.";
+          text.textContent += " Dari " + info.members + " anggota, " + info.flagged + " NIK ditandai untuk dicek lagi. " + info.cleared + " lolos pemeriksaan otomatis.";
         } else {
-          text.textContent = {previous:"Kasus NIK dari review sebelumnya.",extracting:"Pemeriksaan NIK menunggu hasil ekstraksi.",checking:"Hasil tersimpan. Pemeriksaan NIK sedang diproses.",failed:"Ekstraksi gagal; belum ada hasil untuk diperiksa."}[info.stage];
+          text.textContent = {previous:"Kasus NIK dari review sebelumnya.",extracting:"Pemeriksaan NIK menunggu hasil ekstraksi.",checking:"Data KK sudah tersimpan. Sistem sedang memeriksa NIK tiap anggota.",failed:"Ekstraksi gagal; belum ada hasil untuk diperiksa."}[info.stage];
         }
         if (info.review > 0) { link.href = "/nik-review?job=" + encodeURIComponent(id); link.hidden = false; }
         if (info.stage === "extracting" || info.stage === "checking") nikStatusTimer = setTimeout(poll,10000);
@@ -673,7 +676,8 @@
     $("upload-progress-bar").value = done;
     visible("upload-progress-bar", state.batchStarted && state.batch.length > 0);
     const uncertain = state.batch.filter(row => row.status === "uncertain").length;
-    $("batch-progress").textContent = state.batchStarted ? `${done} berkas tersimpan${uncertain ? ` · ${uncertain} perlu dicek` : ""}.` : "";
+    const rejected = state.batch.filter(row => row.status === "rejected").length;
+    $("batch-progress").textContent = state.batchStarted ? `${done} berkas diterima${uncertain ? ` · ${uncertain} belum pasti terkirim` : ""}${rejected ? ` · ${rejected} gagal dikirim` : ""}.` : "";
     visible("view-uploaded-documents", done > 0); $("view-uploaded-documents").disabled = state.uploading;
     $("clear-batch").hidden = !state.batch.length || state.uploading;
     $("check-image").disabled = state.uploading || state.imageChecking;
@@ -687,7 +691,7 @@
       const li = el("li", "batch-item");
       const thumb = el("img", "batch-thumb"); thumb.src = row.url; thumb.alt = "";
       const info = el("div", "batch-info"); info.append(el("strong", "batch-name", row.file.name), el("span", "batch-meta", `${fileSize(row.file)} · ${row.caseId || batchCase(row) || "Isi nomor referensi"}`));
-      let label = row.message || ({ready:"Siap diunggah", uploading:"Mengunggah…", submitted:"Tersimpan", uncertain:"Status unggahan belum pasti. Periksa sebelum mengirim ulang.", rejected:"Belum terkirim"}[row.status] || row.status);
+      let label = row.message || ({ready:"Siap diunggah", uploading:"Mengunggah…", submitted:"Berkas diterima", uncertain:"Status unggahan belum pasti. Periksa sebelum mengirim ulang.", rejected:"Belum terkirim"}[row.status] || row.status);
       if (row.jobId) { const job = state.jobs.find(item => item.id === row.jobId); label = `Tersimpan · ${job ? (hasResult(job) ? "Hasil tersimpan" : (needsDispatchCheck(job) ? "Periksa pengiriman" : statusLabels[job.status] || job.status)) : "Menunggu status"}`; }
       info.append(el("span", `batch-status ${["invalid", "rejected", "uncertain"].includes(row.status) ? "batch-warning" : ""}`, label));
       const actions = el("div", "batch-actions");
@@ -796,7 +800,7 @@
       content = null; renderBatch();
     }
     state.uploading = false; $("close-upload").disabled = false; $("cancel-upload").disabled = false;
-    renderBatch(); await loadJobs(true); announce("Unggahan selesai. Buka daftar untuk melihat hasilnya.");
+    renderBatch(); await loadJobs(true); announce($("batch-progress").textContent + " Buka daftar berkas untuk melihat status pembacaan.");
   }
   function configure(config) {
     const required = ["household_fields", "member_fields", "modes", "accepted_mime_types"];

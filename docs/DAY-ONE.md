@@ -9,7 +9,7 @@ Kedua kartu fiktif. Aplikasi memakai rekaman hasil baca dan skor OCR yang sudah 
 Kalau memakai ZIP serah terima privat, ekstrak dan buka terminal di folder `portable-edition` yang berisi `run_local.py`. Kalau mengambil source dari GitHub, jalankan
 
 ```sh
-git clone --branch v0.4.1 --depth 1 https://github.com/orajsn/oci-kk-document-workbench.git
+git clone --branch v0.4.2 --depth 1 https://github.com/orajsn/oci-kk-document-workbench.git
 cd oci-kk-document-workbench
 ```
 

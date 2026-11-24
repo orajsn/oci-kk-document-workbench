@@ -1,5 +1,11 @@
 # Riwayat rilis
 
+## 0.4.2 · 2026-11-24
+
+Saat upload beberapa KK, petugas bisa melihat berapa berkas yang sudah diterima, gagal dikirim, atau masih perlu dicek status pengirimannya. Setelah data KK tersimpan, halaman hasil menunjukkan jumlah NIK yang masuk antrean petugas.
+
+Di layar pemeriksaan, alasan kasus muncul di atas gambar beserta bagian yang perlu dicocokkan. Misalnya, bila sistem mencatat perbedaan pada digit kelima dari kiri, layar menyebut posisi itu. Kalau posisi digit belum diketahui, petugas diminta membandingkan cetakan dari kiri ke kanan. Rincian asli tetap bisa dibuka. Demo dua KK fiktif memakai bahasa yang sama.
+
 ## 0.4.1 · 2026-11-24
 
 Edisi dokumentasi untuk tim yang menerima repo. README sekarang langsung membuka demo dua KK. Panduan engineer mengikuti satu kasus dari bulk upload, koreksi NIK dan restart sampai uji ambang baca ulang. Kode aplikasi dan default routing sama dengan 0.4.0.
