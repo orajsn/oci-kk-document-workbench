@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4 · 2026-11-24
+
+The original image now stays still in **Fit to view** at fractional browser zoom. Adjusting contrast or grayscale changes the image filter without recalculating its size. Upload thumbnails keep their place while the reference, file list or processing status changes.
+
 ## 0.4.3 · 2026-11-24
 
 The public workbench, browser demo and engineering guides now use English. The first-batch guide follows one fictional member from the printed NIK to the stored correction and explains how to test a reread threshold on the same batch. The hosted participant pilot is managed separately.

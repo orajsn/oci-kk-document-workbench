@@ -4,7 +4,7 @@ A *Kartu Keluarga* (KK) is an Indonesian family card. One image can contain an e
 
 When the application cannot verify a NIK, the reviewer can open the relevant row, compare the printed digits with the original reading, and confirm, correct or mark the number unreadable. The original extraction remains available after a correction.
 
-**[Try the two-card browser demo](https://orajsn.github.io/oci-kk-document-workbench/field-review.html)** or **[download the release](https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.3)**.
+**[Try the two-card browser demo](https://orajsn.github.io/oci-kk-document-workbench/field-review.html)** or **[download the release](https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.4)**.
 
 ## Choose a way to try it
 
@@ -63,3 +63,5 @@ The VM calls OCI services through the Python SDK using an IAM instance principal
 The web UI is in `web/`, the application and extraction adapters are in `kkpilot/`, and the post-save NIK checks are in `nik_router/`. Database schemas and acceptance queries are in `sql/`.
 
 To run the backend tests, use `python -m unittest discover -s tests -p "test_backend_*.py"`. For the full suite, install `requirements-test.txt` in a virtual environment, then run `python -m unittest discover -s tests`. Keep tenancy settings, wallets, real images, OCR diagnostics and Terraform state in your own environment.
+
+To check preview stability locally, run `node tests/viewer-browser.cjs` with Playwright Chromium installed. The test uses fictional practice files.

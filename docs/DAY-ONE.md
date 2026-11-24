@@ -9,7 +9,7 @@ You need Python 3.11 or later and a browser. The reader replays fixed OCR and ex
 If you received a portable handover ZIP, extract it and open a terminal in the `portable-edition` directory containing `run_local.py`. For a fresh clone, use the release tag.
 
 ```sh
-git clone --branch v0.4.3 --depth 1 https://github.com/orajsn/oci-kk-document-workbench.git
+git clone --branch v0.4.4 --depth 1 https://github.com/orajsn/oci-kk-document-workbench.git
 cd oci-kk-document-workbench
 ```
 

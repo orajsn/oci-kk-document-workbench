@@ -588,13 +588,19 @@
     const roomWidth = Math.max(100, viewport.clientWidth - 32); const roomHeight = Math.max(100, viewport.clientHeight - 32);
     if (state.imageFit) state.zoom = Math.min(roomWidth / naturalWidth, roomHeight / naturalHeight, 1);
     const scaledWidth = naturalWidth * state.zoom; const scaledHeight = naturalHeight * state.zoom;
-    const canvasWidth = Math.max(viewport.clientWidth, scaledWidth + 32); const canvasHeight = Math.max(viewport.clientHeight, scaledHeight + 32);
-    canvas.style.width = `${canvasWidth}px`; canvas.style.height = `${canvasHeight}px`;
+    // In fit mode keep the canvas within the fractional CSS viewport, even at browser zoom.
+    canvas.style.width = state.imageFit ? "100%" : `max(100%, ${scaledWidth + 32}px)`;
+    canvas.style.height = state.imageFit ? "100%" : `max(100%, ${scaledHeight + 32}px)`;
     image.style.width = `${image.naturalWidth * state.zoom}px`; image.style.height = `${image.naturalHeight * state.zoom}px`;
-    image.style.left = `${canvasWidth / 2}px`; image.style.top = `${canvasHeight / 2}px`;
+    image.style.left = "50%"; image.style.top = "50%";
     image.style.transform = `translate(-50%, -50%) rotate(${state.rotation}deg)`;
+    $("zoom-value").value = `${Math.round(state.zoom * 100)}%`;
+    renderImageTone();
+  }
+  function renderImageTone() {
+    const image = $("original-image");
     image.style.filter = `contrast(${$("contrast-control").value}%) grayscale(${$("grayscale-control").checked ? 1 : 0})`;
-    $("zoom-value").value = `${Math.round(state.zoom * 100)}%`; $("contrast-value").value = `${$("contrast-control").value}%`;
+    $("contrast-value").value = `${$("contrast-control").value}%`;
   }
   function changeZoom(factor) { state.imageFit = false; state.zoom = Math.min(4, Math.max(.05, state.zoom * factor)); renderImage(); }
   function safeDownloadName(suffix) { return `kk-review-${String(state.selectedId || "draft").replace(/[^a-z0-9_-]/gi, "").slice(0, 60)}-${suffix}.json`; }
@@ -653,7 +659,6 @@
     $("upload-boundary-title").textContent = "Processing location";
     $("upload-boundary-copy").textContent = state.cloudDisclosure || "Approved images are sent to OCI.";
   }
-  let selectedImageUrl = null;
   const batchMaxFiles = 50, batchMaxBytes = 100 * 1024 * 1024;
   function fileSize(file) { return `${(file.size / 1024 / 1024).toFixed(2)} MB`; }
   function batchCase(row) {
@@ -668,7 +673,8 @@
     return "";
   }
   function renderBatch() {
-    const list = $("batch-list"); list.replaceChildren();
+    const list = $("batch-list");
+    const previousRows = new Map(Array.from(list.children, node => [node.dataset.key, node]));
     const total = state.batch.reduce((sum, row) => sum + row.file.size, 0);
     $("batch-count").textContent = state.batch.length ? `${state.batch.length} files · ${(total / 1048576).toFixed(2)} MB` : "No files selected";
     const done = state.batch.filter(row => row.jobId).length;
@@ -688,18 +694,24 @@
     $("submit-upload").disabled = state.uploading || !state.batch.some(row => row.status === "ready");
     $("submit-upload").textContent = state.uploading ? "Uploading…" : "Upload files";
     for (const row of state.batch) {
-      const li = el("li", "batch-item");
-      const thumb = el("img", "batch-thumb"); thumb.src = row.url; thumb.alt = "";
-      const info = el("div", "batch-info"); info.append(el("strong", "batch-name", row.file.name), el("span", "batch-meta", `${fileSize(row.file)} · ${row.caseId || batchCase(row) || "Enter a batch reference"}`));
+      let li = previousRows.get(row.key);
+      if (!li) {
+        li = el("li", "batch-item"); li.dataset.key = row.key;
+        const thumb = el("img", "batch-thumb"); thumb.src = row.url; thumb.alt = "";
+        li.append(thumb, el("div", "batch-info"), el("div", "batch-actions"));
+        list.append(li);
+      }
+      previousRows.delete(row.key);
+      const info = li.children[1]; info.replaceChildren(); info.append(el("strong", "batch-name", row.file.name), el("span", "batch-meta", `${fileSize(row.file)} · ${row.caseId || batchCase(row) || "Enter a batch reference"}`));
       let label = row.message || ({ready:"Ready to upload", uploading:"Uploading…", submitted:"File received", uncertain:"Delivery is unconfirmed. Check its status before resubmitting.", rejected:"Not sent"}[row.status] || row.status);
       if (row.jobId) { const job = state.jobs.find(item => item.id === row.jobId); label = `Received · ${job ? (hasResult(job) ? "Result saved" : (needsDispatchCheck(job) ? "Check delivery" : statusLabels[job.status] || job.status)) : "Awaiting status"}`; }
       info.append(el("span", `batch-status ${["invalid", "rejected", "uncertain"].includes(row.status) ? "batch-warning" : ""}`, label));
-      const actions = el("div", "batch-actions");
+      const actions = li.children[2]; actions.replaceChildren();
       if (!state.uploading && row.status === "uncertain") { const check = el("button", "text-button", "Check status"); check.type = "button"; check.addEventListener("click", () => checkBatchStatus(row)); actions.append(check); }
       if (!state.uploading && row.jobId) { const view = el("button", "text-button", "Open document"); view.type = "button"; view.addEventListener("click", () => { closeUpload(); requestNavigation(() => openDocument(row.jobId)); }); actions.append(view); }
       if (!state.uploading && !state.batchStarted) { const remove = el("button", "icon-button batch-remove", "×"); remove.type = "button"; remove.setAttribute("aria-label", `Remove ${row.file.name}`); remove.addEventListener("click", () => { URL.revokeObjectURL(row.url); state.batch = state.batch.filter(item => item !== row); renderBatch(); fileChanged(); }); actions.append(remove); }
-      li.append(thumb, info, actions); list.append(li);
     }
+    for (const stale of previousRows.values()) stale.remove();
   }
   function addFiles(files) {
     if (state.uploading || state.batchStarted || !state.config) return;
@@ -715,14 +727,15 @@
     $("upload-file").value = ""; renderBatch(); fileChanged();
   }
   function fileChanged() {
-    if (selectedImageUrl) URL.revokeObjectURL(selectedImageUrl);
-    selectedImageUrl = null;
     const row = state.batch.length === 1 ? state.batch[0] : null;
     const enabled = state.config?.capabilities?.upload_image_check === true;
     visible("preparation-preview", enabled && !!row && row.status !== "invalid");
-    $("selected-original").removeAttribute("src"); $("selected-dimensions").textContent = "";
+    const image = $("selected-original");
+    const url = enabled && row && row.status !== "invalid" ? row.url : null;
+    if (image.getAttribute("src") === url) return;
+    if (url) image.src = url; else image.removeAttribute("src");
+    $("selected-dimensions").textContent = "";
     $("preparation-status").textContent = "Check whether all edges of the card are visible.";
-    if (enabled && row && row.status !== "invalid") { selectedImageUrl = URL.createObjectURL(row.file); $("selected-original").src = selectedImageUrl; }
   }
   async function checkImage() {
     const row = state.batch.length === 1 ? state.batch[0] : null; const file = row?.file;
@@ -960,7 +973,7 @@
   $("zoom-in").addEventListener("click", () => changeZoom(1.25)); $("zoom-out").addEventListener("click", () => changeZoom(.8));
   $("fit-image").addEventListener("click", () => { state.imageFit = true; renderImage(); });
   $("reset-image").addEventListener("click", () => { state.rotation = 0; state.imageFit = true; $("contrast-control").value = "100"; $("grayscale-control").checked = false; renderImage(); });
-  $("contrast-control").addEventListener("input", renderImage); $("grayscale-control").addEventListener("change", renderImage);
+  $("contrast-control").addEventListener("input", renderImageTone); $("grayscale-control").addEventListener("change", renderImageTone);
   if (globalThis.ResizeObserver) new ResizeObserver(() => { if (state.imageFit) renderImage(); }).observe($("image-viewport"));
   else window.addEventListener("resize", renderImage);
   window.addEventListener("beforeunload", (event) => { if (state.dirty || state.uploading || state.saving || state.batch.some(row => ["ready", "uncertain"].includes(row.status))) { event.preventDefault(); event.returnValue = ""; } });
