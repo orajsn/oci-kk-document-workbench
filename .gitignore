@@ -7,20 +7,28 @@ private/
 diagnostics/
 *.private.*
 .env
+.env.*
+!.env.example
+!.env.*.example
+.oci/
 *.sqlite*
 *.pem
 *.p12
+*.pfx
+*.key
+[Ww][Aa][Ll][Ll][Ee][Tt]*.zip
 *.sso
 *.tfstate*
 .terraform/
 *.tfvars
+*.tfvars.json
 wallet/
 dist/
 
 # Source images belong in private runtime storage
-*.jpg
-*.jpeg
-*.png
+*.[Jj][Pp][Gg]
+*.[Jj][Pp][Ee][Gg]
+*.[Pp][Nn][Gg]
 !demo/synthetic-kk.png
 *.pptx
 *.pdf
