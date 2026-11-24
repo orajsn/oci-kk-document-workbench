@@ -1,82 +1,82 @@
-# Satu batch, satu koreksi, satu eksperimen NIK
+# Bulk upload dua KK, lalu cek satu NIK
 
-Pada kartu latihan B, satu digit NIK berbeda dari cetakan. Unggah kedua kartu, perbaiki digit itu, lalu gunakan batch yang sama untuk menguji kapan NIK perlu dibaca ulang.
+Upload kartu A dan B sekaligus. Di kartu B, digit terakhir NIK anggota baris kedua salah baca. Dari contoh ini kita bisa cek dua hal. Apakah koreksinya masih ada setelah aplikasi di-restart? Kalau ambang baca ulang diubah, apakah digit yang salah tadi masih ketangkap?
 
-Latihan ini memakai gambar fiktif, pembacaan dan skor OCR sintetis yang dibekukan, serta SQLite di laptop. UI, worker lokal, penyimpanan review dan fungsi routing dijalankan dari kode repo. Perintah di bawah cukup dengan Python 3.11+ dan browser. Tidak ada paket pip atau akun cloud yang perlu disiapkan.
+Kedua kartu fiktif. Aplikasi memakai rekaman hasil baca dan skor OCR yang sudah disiapkan. UI, worker lokal, fungsi routing dan penyimpanan review berjalan dari repo ini. Untuk latihan cukup sediakan Python 3.11+ dan browser. Data disimpan di SQLite pada laptop.
 
-## 1. Mulai dari folder kosong
+## Jalankan aplikasi
 
-Jika menerima ZIP serah terima privat, ekstrak ZIP lalu buka terminal di `portable-edition`, di sebelah `run_local.py`. Jika memakai GitHub, jalankan:
+Kalau memakai ZIP serah terima privat, ekstrak dan buka terminal di folder `portable-edition` yang berisi `run_local.py`. Kalau mengambil source dari GitHub, jalankan
 
 ```sh
-git clone --branch v0.4.0 --depth 1 https://github.com/orajsn/oci-kk-document-workbench.git
+git clone --branch v0.4.1 --depth 1 https://github.com/orajsn/oci-kk-document-workbench.git
 cd oci-kk-document-workbench
 ```
 
-Dari folder itu, jalankan:
+Dari folder itu, jalankan
 
 ```sh
 python --version
 python run_local.py --port 8876 --data-dir runtime/day-one --reference-dir demo/day-one/reader
 ```
 
-Di Windows Anda juga bisa memakai `py -3`, atau `python3` di macOS/Linux. Pakai interpreter yang sama di semua langkah. Biarkan terminal pertama terbuka. Buka [workspace lokal](http://127.0.0.1:8876). Banner **Latihan lokal** dan mode **Rekaman latihan** yang bisa dipilih menunjukkan Anda membuka layanan latihan. Port ini terpisah dari contoh tunnel Batam di port 8765.
+Di Windows bisa pakai `py -3`, di macOS/Linux bisa pakai `python3`. Gunakan interpreter yang sama sampai selesai. Biarkan terminal ini terbuka. Di [aplikasi lokal](http://127.0.0.1:8876), cek banner **Latihan lokal** dan pastikan **Rekaman latihan** bisa dipilih. Port 8876 untuk latihan ini. Contoh tunnel Batam memakai port 8765.
 
-## 2. Upload kedua kartu sekaligus
+## Upload kedua gambar
 
-1. Klik **Unggah KK**. Isi Nomor referensi `LATIHAN` dan pilih **Rekaman latihan**.
-2. Di pemilih file, masuk ke `demo/day-one`. Pilih **kartu-a.png** dan **kartu-b.png** sekaligus dengan Ctrl atau Cmd. Klik **Unggah berkas** satu kali.
-3. Klik **Lihat unggahan** setelah unggahan selesai. Tunggu kedua dokumen berstatus **Perlu diperiksa**. Case ID memiliki akhiran `-001` dan `-002`. Gunakan nama file untuk mengenali kartunya.
-4. Buka terminal kedua di folder yang sama dan jalankan:
+1. Klik **Unggah KK**, isi **Nomor referensi** dengan `LATIHAN` dan pilih **Rekaman latihan**.
+2. Dari `demo/day-one/`, pilih **kartu-a.png** dan **kartu-b.png** bersamaan dengan Ctrl atau Cmd. Klik **Unggah berkas** sekali.
+3. Klik **Lihat unggahan**. Tunggu sampai kedua dokumen berstatus **Perlu diperiksa**. Case ID berakhir `-001` dan `-002`. Pakai nama file untuk mencari kartu B.
+4. Buka terminal kedua di folder yang sama. Cek hasil batch dengan perintah berikut.
 
 ```sh
 python examples/check_day_one.py --batch LATIHAN
 ```
 
-Anda akan melihat dua job ID. Sebelum review, keluaran **awal 2/3, tersimpan 2/3** berarti dua dari tiga NIK cocok dengan cetakan. Salin kedua ID jika ingin mencocokkannya setelah restart.
+Catat kedua job ID. Ringkasan **awal 2/3, tersimpan 2/3** berarti dua dari tiga NIK cocok dengan cetakan.
 
-## 3. Koreksi satu NIK dan buka kembali
+## Koreksi NIK kartu B
 
-1. Buka **kartu-b.png** di daftar dokumen. Bandingkan gambar di sebelah kiri dengan tab **Anggota**. Pada baris 2, sumber berakhir **0009** dan nilai tersimpan berakhir **0003**.
-2. Ubah digit terakhir field NIK pada **baris 2** menjadi **9**. Pertahankan seluruh nol di depan. Isi **Catatan petugas** dengan alasan singkat, pilih **Perlu diperiksa** karena Anda baru memeriksa satu field, lalu klik **Simpan pemeriksaan**. Riwayat mendapatkan satu keputusan.
-3. Tutup tab browser. Di terminal server tekan Ctrl+C, lalu jalankan kembali perintah server pada langkah 1 **dengan data-dir yang sama**. Buka workspace di jendela privat browser, buka **kartu-b.png → Anggota**. Digit akhirnya harus **9**. Klik **Unduh JSON**. Dalam `review_history[0].previous_extraction.members[1].nik_raw` digit akhirnya masih **3**. `extraction.members[1].nik_raw` berakhir **9**. Array JSON dimulai dari indeks 0.
-4. Jalankan pemeriksaan berikut di terminal kedua:
+1. Buka **kartu-b.png**, pilih tab **Anggota**, lalu bandingkan baris 2 dengan gambar di kiri. Di cetakan, NIK berakhir **0009**. Di hasil ekstraksi, angkanya **0003**.
+2. Ganti digit terakhir NIK pada baris itu menjadi **9**. Pertahankan nol di depan. Isi **Catatan petugas** dengan alasan koreksi. Pilih **Perlu diperiksa** karena baru satu field yang dicek, lalu klik **Simpan pemeriksaan**.
+3. Tutup tab browser. Di terminal server tekan Ctrl+C, lalu ulangi perintah `run_local.py` dari langkah awal dengan `--data-dir` yang sama. Buka aplikasi di jendela privat browser, lalu buka **kartu-b.png → Anggota**. Digit akhirnya sekarang **9**.
+4. Klik **Unduh JSON**. NIK hasil AI di `review_history[0].previous_extraction.members[1].nik_raw` masih berakhir **3**. NIK setelah koreksi di `extraction.members[1].nik_raw` berakhir **9**. Indeks `[1]` adalah anggota kedua.
+
+Di terminal kedua, cek lagi batch tadi.
 
 ```sh
 python examples/check_day_one.py --batch LATIHAN --require-review
 ```
 
-**Tanda lulus.** Dua job ID tetap sama. Kartu B memiliki satu review dan satu NIK berubah. Kartu A memiliki nol review. Ringkasan menjadi **awal 2/3, tersimpan 3/3**. Koreksi disimpan di `runtime/day-one/pilot.sqlite3`. Pembaca sintetis tetap menghasilkan nilai awalnya.
+Kedua job ID harus sama dengan sebelum restart. Kartu A punya nol review, kartu B punya satu review dan satu NIK berubah. Ringkasannya **awal 2/3, tersimpan 3/3**. Koreksi ada di `runtime/day-one/pilot.sqlite3`. Kalau rekaman sintetis dibaca lagi, hasil awalnya tetap 2/3.
 
-## 4. Tuning satu field
+## Coba ubah ambang baca ulang
 
-Pertanyaannya: pada bacaan NIK yang sama, apakah ada ambang yang mengirim lebih sedikit NIK benar untuk baca ulang tanpa melewatkan kesalahan pada kartu B? Uji kandidat terhadap keluaran **sebelum koreksi**.
+Pakai hasil AI **sebelum koreksi** pada batch yang sama.
 
 ```sh
 python examples/check_day_one.py --batch LATIHAN --require-review --compare 0.83 0.80
 ```
 
-| Ambang bukti OCR | NIK ke baca ulang | NIK salah lolos | NIK benar ikut baca ulang |
+| Ambang skor OCR | NIK yang dibaca ulang | NIK salah yang lolos | NIK benar yang ikut dibaca ulang |
 |---|---:|---:|---:|
-| 0,90 · default | 2 | 0 | 1 |
-| 0,83 · kandidat latihan | 1 | 0 | 0 |
-| 0,80 · pembanding | 0 | 1 | 0 |
+| 0,90 (default) | 2 | 0 | 1 |
+| 0,83 | 1 | 0 | 0 |
+| 0,80 | 0 | 1 | 0 |
 
-Pada kartu B, OCR buatan memberi skor 0,84 untuk bacaan yang cocok dan 0,82 untuk bacaan yang keliru. Ambang 0,83 memisahkan keduanya. Angka di tabel adalah **pemicu baca ulang**. Beban review manusia baru bisa diukur sesudah pembaca crop mengembalikan hasil. Tidak ada model yang dipanggil selama replay ini.
+Pada kartu B, skor OCR sintetisnya 0,84 untuk bacaan yang benar dan 0,82 untuk yang salah. Dengan ambang 0,83, hanya NIK yang salah masuk daftar baca ulang. Coba `--compare 0.85` dan keduanya akan masuk lagi. Tabel ini menghitung pemicu baca ulang. Jumlah yang akhirnya perlu dicek petugas baru diketahui setelah crop dibaca. Replay lokal ini hanya membaca job dan ekspor tanpa memanggil model atau mengubah record.
 
-**Coba sendiri:** ganti argumen pembanding menjadi `--compare 0.85`. Kedua NIK kartu B kembali masuk daftar baca ulang. Kode yang dipakai ada di [fungsi classify](../nik_router/routing.py), parameter `min_confidence`. Router pascapenyimpanan memakai default `OCR_MIN_CONFIDENCE` pada fungsi yang sama. Untuk mengusulkan default baru, ubah konstanta itu pada branch tersendiri, jalankan uji regresi dan evaluasi holdout dengan label terverifikasi, lalu ajukan rilis. Gunakan tag terakhir yang disetujui untuk rollback. Replay ini hanya membaca job dan ekspor, sehingga mencoba ambang lain tidak mengubah record.
+Parameternya `min_confidence` pada [fungsi classify](../nik_router/routing.py). Router yang berjalan setelah hasil tersimpan memakai fungsi yang sama dengan default `OCR_MIN_CONFIDENCE`. Untuk mengubah default, buat branch, jalankan regresi dan tes pada sampel terpisah dengan label terverifikasi, lalu ajukan rilis. Tag terakhir yang disetujui menjadi titik rollback.
 
-## Kalau hasil Anda berbeda
+## Kalau hasilnya berbeda
 
-| Gejala | Cek berikutnya |
+| Yang terlihat | Yang perlu dicek |
 |---|---|
-| Rekaman latihan berwarna abu-abu | Jalankan server dari root repo dengan `--reference-dir demo/day-one/reader`. Pastikan root itu berisi dua file `demo/day-one/reader/KK-*.json`. |
-| `REFERENCE_NOT_FOUND` | Gunakan PNG asli dari repo. Menyimpan kembali gambar dapat mengubah hash meski tampilannya sama. |
-| Perintah tidak menemukan dua job | Tunggu worker selesai, lalu cocokkan Case ID pada daftar. Jika prefix sudah terpakai, buat satu batch baru dengan prefix berbeda, misalnya `LATIHAN2`, lalu gunakan `--batch LATIHAN2`. |
-| Server tidak dapat bind ke port | Pilih port lain seperti 8877 pada server, URL browser dan `--port 8877` pada checker. |
-| Daftar kosong setelah restart | Jalankan dari folder repo yang sama. Periksa lokasi `runtime/day-one/pilot.sqlite3`. |
-| Hasil akhir masih 2/3 | Buka kartu B, cek baris, pastikan simpan berhasil. Klik **Unduh JSON** dari record tersimpan untuk memeriksa riwayatnya. |
+| **Rekaman latihan** abu-abu | Jalankan server dari root repo dengan `--reference-dir demo/day-one/reader`. Folder itu harus berisi dua file `KK-*.json`. |
+| `REFERENCE_NOT_FOUND` | Pakai PNG asli dari repo. Gambar yang disimpan ulang bisa punya hash berbeda. |
+| Checker belum menemukan dua job | Tunggu worker selesai, lalu cek Case ID. Kalau `LATIHAN` sudah dipakai, coba referensi baru seperti `LATIHAN2` dan sesuaikan `--batch LATIHAN2`. |
+| Port sudah dipakai | Ganti port di perintah server, di URL browser dan di checker. Misalnya, pakai `--port 8877`. |
+| Setelah restart daftar kosong | Cek folder tempat server dijalankan dan lokasi `runtime/day-one/pilot.sqlite3`. |
+| Skor tersimpan masih 2/3 | Buka kartu B, cek baris 2 dan lihat riwayat di **Unduh JSON** untuk memastikan koreksi tersimpan. |
 
-## Penerimaan di OCI
-
-Latihan lokal membuktikan bulk, review dokumen dan tuning routing. Antrean NIK per anggota dengan crop dan penyimpanan keputusan di Oracle tersedia pada deployment cloud. Untuk mengujinya pada lingkungan penerima, ikuti [uji bulk dan review di OCI](HANDOVER.md#uji-bulk-dan-review-di-oci). Untuk angka kualitas customer, gunakan kohor berizin dan evaluator terpisah sesuai [panduan tuning](TUNING.md).
+Untuk mencoba antrean NIK per anggota dengan crop dan memeriksa keputusan langsung di Oracle Database, ikuti [uji bulk dan review di OCI](HANDOVER.md#uji-bulk-dan-review-di-oci). Untuk mengukur akurasi pada KK milik customer, tim perlu gambar berizin dan acuan yang dinilai terpisah. [Panduan tuning](TUNING.md)

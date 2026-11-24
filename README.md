@@ -1,67 +1,62 @@
 # Ruang Dokumen KK
 
-Unggah foto kartu keluarga, buka hasil per anggota, lalu cocokkan angka yang meragukan dengan cetakannya. Petugas dapat menyimpan koreksi dan membuka kembali nilai awal.
+Kalau ada 12 foto KK yang di-upload sekaligus, kita ingin bisa buka hasil tiap KK dan langsung lihat siapa saja anggotanya. Nama, NIK dan tanggal lahir harus masuk ke orang yang tepat. Kalau satu digit NIK kurang jelas, petugas bisa buka potongan gambar untuk anggota itu, cek cetakannya, lalu simpan keputusan. Hasil awal AI tetap bisa dilihat.
 
-## Coba di laptop
+**[Coba demo dengan dua KK fiktif](https://orajsn.github.io/oci-kk-document-workbench/Simulasi-Review-NIK.html)**. Pada **Contoh 02**, pilih **Buka hasil**, lalu **Periksa NIK anggota ini**. Perbesar angkanya. Pilih **Lihat seluruh baris anggota** untuk mengecek nama dan NIK dalam satu baris. Keputusan latihan tersimpan di browser. Versi offline ada di [demo/field-review.html](demo/field-review.html) setelah repo diunduh.
 
-**Lihat pemeriksaan NIK.** Buka [contoh interaktif](demo/field-review.html) dari folder hasil unduhan di browser. Dua berkas fiktif sudah tersedia. Pilih **Buka hasil → Periksa NIK anggota ini** untuk membandingkan gambar dan hasil pembacaan. Keputusan latihan disimpan di browser tersebut.
+## Coba bulk upload di laptop
 
-**Coba bulk upload.** Dengan Python 3.11 atau lebih baru, jalankan perintah berikut dari folder repo:
+Pakai Python 3.11 atau lebih baru. Dari folder repo, jalankan
 
 ```sh
 python run_local.py --port 8876 --data-dir runtime/day-one --reference-dir demo/day-one/reader
 ```
 
-Buka [Ruang Dokumen lokal](http://127.0.0.1:8876). Pilih **Unggah KK**, isi **Nomor referensi**, pilih **Rekaman latihan**, lalu unggah kedua PNG dari `demo/day-one/`. Buka satu hasil dan pilih tab **Anggota**. Untuk mencoba koreksi, restart dan tuning pada batch yang sama, ikuti [latihan penerima](docs/DAY-ONE.md).
+Buka [aplikasi lokal](http://127.0.0.1:8876), pilih **Unggah KK**, isi **Nomor referensi**, lalu pilih **Rekaman latihan**. Upload kedua PNG dari `demo/day-one/` sekaligus. Buka satu KK dan pilih tab **Anggota**. [Panduan dari upload sampai tuning](docs/DAY-ONE.md) menunjukkan digit yang perlu dikoreksi, cara membuka hasil setelah restart, dan cara mencoba ambang baca ulang pada batch yang sama.
 
-## Untuk engineer
-
-- [Instalasi OCI dan rollback](docs/OPERATIONS.md)
-- [Uji penerimaan di Oracle Database](docs/HANDOVER.md)
-- [Tuning OCR, prompt dan pemicu baca ulang NIK](docs/TUNING.md)
-- [Riwayat rilis](CHANGELOG.md)
-
-## Arsitektur deployment OCI
+## Alur di OCI Batam
 
 ```mermaid
 flowchart LR
-    U[Petugas] --> A[API pada OCI Compute]
-    A --> O[OCI Object Storage: gambar asli]
+    U[Petugas] --> A[API di OCI Compute]
+    A --> O[OCI Object Storage · foto asli]
     A --> D[(Oracle Autonomous Database)]
     A --> Q[OCI Queue]
-    Q --> W[Worker: OCR dan ekstraksi]
+    Q --> W[Worker · OCR dan ekstraksi]
     O --> W
-    W --> G[OCI Generative AI routing profile]
+    W --> G[OCI Generative AI · routing profile]
     G --> M[Gemini vision]
     W --> D
-    D --> R[Worker review NIK]
-    R -->|Crop yang perlu dibaca ulang| G
+    D --> R[Worker pemeriksaan NIK]
+    R -->|Baca ulang crop bila perlu| G
     R --> D
-    D --> UI[UI: crop, nilai asli dan keputusan]
+    D --> UI[UI · gambar, hasil AI dan keputusan petugas]
 ```
 
-Pada konfigurasi contoh, aplikasi menerima unggahan di OCI Batam. Rute on-demand contoh menargetkan Chicago dengan pemrosesan Gemini di Google Americas. Pemilik deployment memasok, memverifikasi dan menyetujui profile sendiri. API cloud bind ke loopback dan dirancang untuk diakses melalui tunnel privat. Identitas operator di pilot mengikuti identitas SSH terkonfigurasi; akses multi-petugas produksi membutuhkan autentikasi per pengguna.
+Foto masuk lewat aplikasi di Batam. Worker mengambil job dari OCI Queue, membaca gambar, lalu menyimpan data keluarga dan anggotanya di Oracle Database. Setelah hasil tersimpan, router memeriksa NIK per anggota. Petugas bisa membuka crop untuk kasus yang masih meragukan.
 
-## Titik tuning
+Di konfigurasi contoh, aplikasi dan penyimpanan ada di Batam. Panggilan Gemini memakai routing profile on-demand dengan tujuan Chicago dan diproses di Google Americas. Saat memasang di tenancy sendiri, tim OCI perlu memeriksa profile dan memastikan tujuan pemrosesan sudah disetujui. API hanya mendengarkan di loopback dan diakses lewat tunnel privat. Pilot memakai identitas operator dari konfigurasi SSH. Untuk beberapa petugas di produksi, siapkan login per pengguna.
 
-| Saat ada masalah | Yang diubah | Yang dibuktikan |
-|---|---|---|
-| Angka dari anggota lain ikut terbaca | Orientasi, batas crop dan pengikatan nama ke baris | Crop lengkap untuk orang yang benar |
-| Nilai di gambar terlihat tetapi hasil berubah format atau field | Prompt, kontrak JSON dan parser | Karakter sumber, leading zero, null dan urutan anggota tetap terjaga |
-| Terlalu banyak atau terlalu sedikit review | Ambang bukti OCR, konflik struktur, baca ulang dan aturan nomor lama | NIK salah lolos, NIK benar ikut review, waktu dan panggilan per dokumen |
+## Kalau ada field yang salah, apa yang bisa dituning?
 
-Panduan [tuning dan evaluasi](docs/TUNING.md) menjelaskan file serta fungsi yang mengendalikan tiap tahap. Model Gemini dipanggil lewat layanan terkelola. Perubahan di sini memengaruhi input, instruksi, validasi dan routing. Bobot model tidak dilatih oleh aplikasi.
-
-| Direktori | Isi |
+| Yang terlihat di hasil | Mulai cek di sini |
 |---|---|
-| `kkpilot/`, `web/` | API, UI, worker, kontrak model, pipeline OCR dan penyimpanan |
-| `nik_router/` | Pemeriksa post-commit, pembacaan crop, ledger dan kebijakan format lama |
-| `sql/` | Skema Oracle, grant runtime dan event keputusan review |
-| `deploy/`, `infra/` | Unit systemd, contoh environment dan Terraform yang dinonaktifkan secara default |
-| `tests/`, `examples/`, `demo/` | Pemeriksaan lokal dan contoh sintetis |
+| NIK terbaca jelas, tapi masuk ke anggota lain | Buka seluruh baris. Cek orientasi gambar, posisi crop, dan nama yang dipasangkan ke baris itu. |
+| Anggotanya sudah benar, tapi nol di depan hilang atau nilai masuk ke field lain | Bandingkan cetakan dengan respons model, lalu cek prompt, schema JSON dan parser. |
+| Terlalu banyak NIK ke petugas, atau ada NIK salah yang lolos | Uji ambang OCR dan aturan baca ulang. Hitung kedua kasus tadi, berikut waktu dan jumlah panggilan per KK. |
 
-Untuk deployment, masukkan resource tenancy dan profil crop ke konfigurasi privat. Simpan gambar asli, respons OCR, wallet dan state Terraform di lingkungan penerima.
+Tuning di repo ini mengubah cara aplikasi menyiapkan gambar, meminta hasil dari Gemini dan memeriksanya. Aplikasi memakai bobot model Gemini yang disediakan layanan. [File dan contoh eksperimen per tahap](docs/TUNING.md)
 
-## Menjalankan tes
+## Untuk tim yang menerima repo
 
-Tes backend dapat dijalankan dengan `python -m unittest discover -s tests -p "test_backend_*.py"`. Untuk suite lengkap, pasang `requirements-test.txt` di virtual environment lalu jalankan `python -m unittest discover -s tests`.
+| Keperluan | Panduan atau folder |
+|---|---|
+| Pasang di OCI, pantau worker, atau rollback | [Operasi](docs/OPERATIONS.md) · `deploy/` · [Terraform](infra/README.md) |
+| Cek hasil dan riwayat review langsung di Oracle | [Uji serah terima](docs/HANDOVER.md) · `sql/` |
+| Telusuri alur dari upload sampai hasil tersimpan | `web/` dan `kkpilot/` |
+| Telusuri alasan NIK dibaca ulang | `nik_router/` |
+| Cari contoh, tes, atau perubahan antarversi | `demo/` · `examples/` · `tests/` · [Changelog](CHANGELOG.md) |
+
+Isi resource tenancy dan profil crop di konfigurasi privat. Gambar asli, respons OCR, wallet dan Terraform state disimpan di lingkungan tim penerima.
+
+Untuk tes backend, jalankan `python -m unittest discover -s tests -p "test_backend_*.py"`. Untuk seluruh suite, pasang dependensi dari `requirements-test.txt` di virtual environment, lalu jalankan `python -m unittest discover -s tests`.

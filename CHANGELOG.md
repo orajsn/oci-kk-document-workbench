@@ -1,23 +1,29 @@
-# Changelog
+# Riwayat rilis
+
+## 0.4.1 · 2026-11-24
+
+Edisi dokumentasi untuk tim yang menerima repo. README sekarang langsung membuka demo dua KK. Panduan engineer mengikuti satu kasus dari bulk upload, koreksi NIK dan restart sampai uji ambang baca ulang. Kode aplikasi dan default routing sama dengan 0.4.0.
 
 ## 0.4.0 · 2026-11-22
 
-Daftar berkas, unggahan dan pemeriksaan NIK kini berbahasa Indonesia. Daftar menampilkan jumlah anggota dari hasil tersimpan dan dapat dibaca dalam bentuk kartu di ponsel. Petugas dapat membandingkan potongan NIK dengan nilai hasil pembacaan dalam satu layar. Panduan latihan mengikuti label pada UI.
+Daftar berkas, form upload dan pemeriksaan NIK memakai bahasa Indonesia. Jumlah anggota di daftar diambil dari hasil yang sudah tersimpan. Di ponsel, tiap KK tampil sebagai kartu. Saat memeriksa NIK, petugas bisa melihat angka hasil ekstraksi dan potongan gambar di satu layar. Panduan latihan memakai nama tombol yang sama dengan UI.
 
 ## 0.3.0 · 2026-11-21
 
-Tambahkan latihan penerima dari dua gambar ke dua job, koreksi satu NIK, restart, audit versi dan pembandingan ambang routing pada batch yang diunggah. Pembacaan sintetis, sinyal OCR dan kunci cetakan disimpan terpisah. Jalur lokal memakai SQLite dan Python standard library. Default routing tetap 0,90. Paket privat memuat edisi portabel lengkap agar latihan dapat diikuti secara offline.
+Latihan lokal memakai dua gambar. Tiap gambar mendapat job sendiri. Setelah mengoreksi satu NIK, kita bisa restart aplikasi, membuka nilai sebelum dan sesudah koreksi, lalu mencoba ambang baca ulang pada batch tadi. Default tetap 0,90.
+
+Latihan berjalan dengan Python standard library dan SQLite. Hasil pembacaan, sinyal OCR, dan acuan cetakan disimpan terpisah. Edisi portabel lengkap juga disertakan di paket privat untuk latihan offline.
 
 ## 0.2.0 · 2026-11-21
 
-Tambahkan evaluasi semua field per dokumen. Hasil meliputi slot terbaca, kosong atau tidak berlaku, perbedaan, acuan ambigu dan KK yang cocok penuh. Fixture sintetis menunjukkan dampak satu field yang salah pada skor satu dokumen.
+Evaluasi sekarang mencakup semua field per KK. Laporan membedakan nilai yang terbaca, kolom kosong, field yang tidak ada di layout, dan field yang acuannya belum jelas. Contoh dua anggota menunjukkan kenapa satu field berbeda cukup membuat satu KK gagal cocok penuh.
 
 ## 0.1.0 · 2026-11-21
 
-Rilis handover awal dari workbench bulk dan router review.
+Rilis pertama untuk bulk upload dan pemeriksaan NIK.
 
-- Bulk upload memberi satu job untuk tiap dokumen, dengan receipt dan penanganan pengiriman ulang.
-- Worker membaca citra, menjalankan OCR lokal opsional, lalu memanggil adapter OCI Generative AI dengan kontrak data rumah tangga dan anggota.
-- Pemeriksaan post-commit membaca ulang crop NIK yang meragukan dan membuat kasus per anggota. Keputusan manusia berversi disimpan terpisah dari payload AI.
-- Dukungan format cetak lama membandingkan digit dengan bukti crop tanpa mengisi nol atau menebak digit. Validasi identitas bisnis merupakan tahap tersendiri.
-- Distribusi portabel mengambil compartment dan routing profile dari environment operator. Profil geometri customer dikeluarkan, ledger baca ulang dapat diinisialisasi pada instalasi baru, dan demo serta lab memakai fixture sintetis.
+- Tiap gambar dalam batch mendapat satu job dan bukti penerimaan. Aplikasi menangani pengiriman ulang.
+- Worker membaca gambar, menjalankan OCR lokal bila diaktifkan, lalu meminta data keluarga dan anggota melalui adapter OCI Generative AI.
+- Setelah hasil tersimpan, router membaca ulang crop NIK yang meragukan. Kasus review terikat ke anggota. Setiap keputusan petugas punya revisi sendiri sehingga hasil AI awal masih bisa dibuka.
+- Untuk format cetak lama, router mencocokkan digit dengan crop. Digit yang hilang tetap perlu diperiksa. Validasi identitas untuk keperluan bisnis dilakukan terpisah.
+- Pada instalasi baru, operator mengisi compartment dan routing profile lewat environment serta menyiapkan ledger untuk baca ulang. Repo portabel memakai contoh sintetis. Profil geometri customer disimpan secara privat.

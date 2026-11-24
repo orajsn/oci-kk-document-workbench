@@ -1,19 +1,21 @@
-# Kalibrasi crop dan model OCR
+# Memastikan crop jatuh di baris anggota yang benar
 
-**Input pertama adalah gambar asli yang disetujui.** Periksa orientasi EXIF, lalu crop manual dan rotasi sesuai kebijakan input. Nomor baris, batas tabel dan hash piksel mengikat bukti ke pemilik field. Diagnosis geometri terpisah dari keputusan apakah karakter terbaca.
+Kalau NIK terbaca jelas tetapi ternyata milik anggota di sebelahnya, cek dulu posisi crop pada gambar asli. Mulai dari gambar yang diizinkan, periksa orientasi EXIF, lalu terapkan crop manual dan rotasi sesuai konfigurasi input. Cocokkan nomor baris, batas tabel, dan hash piksel. Setelah yakin anggotanya benar, baru nilai apakah digitnya terbaca.
 
-### Gambar sintetis untuk mempelajari kontrak
+## Coba dengan gambar latihan
 
 ```sh
 python examples/make_focus_fixture.py --output runtime/focus-example.json
 ```
 
-Perintah ini membagi gambar contoh menjadi dua area ilustrasi, menghitung tanda pengenal dan pin, lalu memanggil pembaca manifest asli untuk memeriksa kedua crop. Koordinat pada contoh hanya cocok untuk gambar demonstrasi. Untuk deployment aktif, buat profil dengan foto privat yang diizinkan dan review posisi anggota per layout. Simpan manifest dan sha256-nya pada lokasi privat yang disyaratkan oleh validator. `reference_values_included` selalu false.
+Perintah ini membagi gambar contoh menjadi dua area, menghitung hash yang dibutuhkan, lalu mengecek kedua crop dengan pembaca manifest yang dipakai aplikasi. Koordinat contoh hanya berlaku untuk gambar itu. Untuk layout customer, periksa posisi setiap anggota pada foto yang diizinkan. Simpan manifest dan SHA-256 di lokasi privat yang dibaca validator. Isi `reference_values_included` harus `false`.
 
-### Tiga kontrak berbeda
+## File mana yang mengatur apa?
 
-1. **Focused view.** Manifest `kk-focused-source-geometry-1.0` memuat satu record per hash sumber, kebijakan crop/rotasi, ukuran/pixel hash kanonis dan dua bbox berurutan: `name_table` dan `middle_member_table`. Setiap bbox memakai [left, top, right, bottom] pixel kanonis, berikut ukuran dan hash piksel ROI. `review_record_sha256` mengikat bukti review geometri.
-2. **Router NIK.** `nik_router/crop-profiles.json` memetakan hash sumber ke alias, transform, `canonical_sha`, rectangle kolom NIK dan kolom nama, dan satu bbox relatif kolom NIK per anggota. Kedua kolom harus berbagi koordinat vertikal yang sama. Jika profil tidak tersedia, router mencoba header NIK dan pasangan nama/baris OCR pada frame yang diverifikasi. Crop yang tidak dapat diikat secara aman perlu pemeriksaan operator.
-3. **Model OCR.** `paddle-server-models-1.0` berisi `files`, yaitu pemetaan path relatif ke SHA-256. Untuk setiap model, hash `inference.json`, `inference.yml` dan `inference.pdiparams`. Hanya buat manifest dari bobot yang telah diverifikasi asal dan versinya. Konfigurasi menunjuk manifest serta hash file manifest itu sendiri.
+**Area tabel untuk pembacaan terarah.** Manifest `kk-focused-source-geometry-1.0` menyimpan satu record per hash gambar sumber. Isinya mencakup aturan crop dan rotasi, ukuran serta hash piksel gambar setelah transformasi, lalu dua kotak berurutan, `name_table` dan `middle_member_table`. Setiap kotak memakai koordinat `[left, top, right, bottom]` dalam piksel pada gambar tersebut. Catat juga ukuran dan hash piksel masing-masing crop. Nilai `review_record_sha256` mengikat manifest ke catatan pemeriksaan posisi.
 
-Ukuran bbox selalu merujuk citra sumber dengan transform yang dicatat. Pembesaran hanyalah view baru. Bila satu crop berpindah ke anggota lain, laporkan sebagai salah pemetaan walaupun semua digit yang terbaca valid.
+**Baris anggota untuk review NIK.** Di `nik_router/crop-profiles.json`, setiap hash sumber dipasangkan dengan alias, transformasi, `canonical_sha`, kotak kolom NIK dan nama, serta satu kotak per anggota yang posisinya relatif terhadap kolom NIK. Batas vertikal kolom nama dan NIK harus sama. Kalau profil belum tersedia, router mencari header NIK dan mencocokkan nama dengan baris OCR pada frame yang sudah diverifikasi. Kalau anggotanya masih belum jelas, teruskan ke petugas.
+
+**File model OCR.** Pada manifest `paddle-server-models-1.0`, bagian `files` memasangkan path relatif dengan SHA-256. Untuk tiap model, catat hash `inference.json`, `inference.yml` dan `inference.pdiparams` setelah asal dan versi bobot diverifikasi. Konfigurasi aplikasi menyimpan lokasi dan hash manifest itu sendiri.
+
+Saat membandingkan ukuran asli dengan zoom, pakai koordinat sumber dan transformasi yang sama. Kalau crop bergeser satu baris, catat sebagai salah anggota walaupun semua digitnya terbaca.
