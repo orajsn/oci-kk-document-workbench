@@ -1,31 +1,29 @@
 <!doctype html>
-<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ruang Dokumen KK · Panduan Demo FIF</title><style>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KK Document Workbench · Product guide</title><style>
 :root{color:#1d352e;background:#f4f5ef;font:16px/1.55 "Segoe UI",system-ui,sans-serif;color-scheme:light}*{box-sizing:border-box}body{max-width:940px;margin:auto;padding:20px clamp(16px,5vw,54px) 48px}header{border-bottom:1px solid #adbdad;padding:8px 0;color:#365448;font-weight:650}main{background:white;margin-top:18px;border:1px solid #d8dfd6;border-radius:12px;overflow:hidden}.intro{padding:clamp(22px,5vw,45px);background:#173f32;color:white}h1{font-size:clamp(2rem,5vw,3rem);line-height:1.06;margin:0 0 .35em;letter-spacing:-.035em}h2{margin:0 0 8px;font-size:1.24rem}p{margin:0 0 12px}.intro p{max-width:60ch;color:#edf1e7}a{color:#12543d;text-underline-offset:3px}a:focus-visible{outline:3px solid #b8701f;outline-offset:4px}.start{display:inline-block;background:#f2f2da;padding:10px 17px;border-radius:6px;font-weight:650;color:#183b2b;margin-top:4px}section{padding:22px clamp(18px,5vw,45px)}section+section{border-top:1px solid #e0e5dd}ol{margin:8px 0 0;padding-left:23px}li+li{margin-top:5px}code,pre{font-family:Consolas,"Courier New",monospace}code{font-size:.93em;overflow-wrap:anywhere}pre{padding:11px 14px;border-left:3px solid #82a58a;background:#f4f7f2;font-size:.88em;overflow-x:auto;margin:10px 0 13px}nav{display:flex;flex-wrap:wrap;gap:7px 18px}nav a{padding:3px 0}footer{margin-top:15px;color:#506457;font-size:.86em}@media print{body{padding:0;background:white}main{border:none}.intro{background:white;color:#173f32;padding:10px 0}.intro p{color:inherit}section{padding:12px 0;break-inside:avoid}}
 </style></head>
-<body><header>FIF · Demo dan serah terima</header><main>
-<div class="intro"><h1>Ruang Dokumen KK</h1>
-<p>Kalau satu digit NIK salah baca, petugas bisa buka gambar anggota itu, perbesar angkanya, lalu simpan koreksi. Coba dari dua KK fiktif yang sudah tersedia.</p>
-<a class="start" href="Simulasi-Review-NIK.html">Buka demo pemeriksaan NIK</a></div>
-<section aria-labelledby="operator"><h2 id="operator">Cek satu NIK</h2>
-<ol><li>Di <strong>Contoh 02</strong>, pilih <strong>Buka hasil</strong>, lalu <strong>Periksa NIK anggota ini</strong>. Baca alasan di atas gambar. Perbesar NIK, lalu pilih <strong>Lihat seluruh baris anggota</strong> untuk mengecek nama dan angka pada baris yang sama.</li>
-<li>Pilih <strong>Konfirmasi sesuai cetakan</strong> kalau angkanya cocok, <strong>Koreksi NIK</strong> kalau ada digit yang salah, atau <strong>Masih tidak terbaca</strong> kalau gambarnya belum jelas.</li>
-<li>Kembali ke daftar, lalu buka berkas yang sama. Pilih <strong>Buka keputusan</strong>. Hasil awal dan keputusan tadi tersimpan di browser ini.</li></ol></section>
-<section aria-labelledby="engineering"><h2 id="engineering">Upload dua KK sekaligus di laptop</h2>
-<p><a href="https://github.com/orajsn/oci-kk-document-workbench/archive/refs/tags/v0.4.2.zip">Unduh source</a>, ekstrak, lalu buka terminal di folder yang berisi <code>run_local.py</code>. Pakai Python 3.11 atau lebih baru.</p>
+<body><header>FIF · Family card processing on OCI</header><main>
+<div class="intro"><h1>KK Document Workbench</h1>
+<p>A family card contains several people on one sheet. Open a member’s printed row, compare the national identification number (NIK) with the extracted digits, and record what you can verify.</p>
+<a class="start" href="field-review.html">Try the two-card review</a></div>
+<section aria-labelledby="review"><h2 id="review">Review a member’s NIK</h2>
+<ol><li>Choose <strong>Open result</strong> on <strong>Example 02</strong>, then <strong>Review this NIK</strong>. Read the reason above the crop. Use <strong>Show full member row</strong> to confirm whose number you are checking.</li>
+<li>Choose <strong>Confirm as printed</strong> if the digits match. Choose <strong>Correct NIK</strong> if the print clearly differs, or <strong>Still unreadable</strong> if a digit is unclear.</li>
+<li>Return to the document list. Open the same card and choose <strong>Open decision</strong> to see the original reading and the saved decision.</li></ol>
+<p>This browser exercise uses two fictional records and saves decisions in this browser. It makes no model calls.</p></section>
+<section aria-labelledby="local"><h2 id="local">Try a bulk upload on your computer</h2>
+<p><a href="https://github.com/orajsn/oci-kk-document-workbench/archive/refs/tags/v0.4.3.zip">Download the source</a> and extract it. Open a terminal in the directory containing <code>run_local.py</code>. With Python 3.11 or later, run:</p>
 <pre>python run_local.py --port 8876 --data-dir runtime/day-one --reference-dir demo/day-one/reader</pre>
-<ol><li>Buka <code>http://127.0.0.1:8876</code> di laptop tadi. Klik <strong>Unggah KK</strong>, isi referensi <code>LATIHAN</code> dan pilih <strong>Rekaman latihan</strong>. Dari <code>demo/day-one/</code>, pilih <code>kartu-a.png</code> dan <code>kartu-b.png</code> sekaligus.</li>
-<li>Buka kartu B dan bandingkan NIK baris kedua dengan cetakannya. Simpan koreksinya. Restart server dengan folder data yang sama, lalu buka lagi riwayat kartu B.</li>
-<li>Di terminal kedua, coba ambang baca ulang pada hasil sebelum koreksi.</li></ol>
-<pre>python examples/check_day_one.py --batch LATIHAN --require-review --compare 0.83 0.80</pre>
-<p>Pada contoh ini, ambang 0,90 mengirim dua NIK untuk dibaca ulang. Di 0,83 hanya satu yang dikirim dan digit yang salah masih ketangkap. Di 0,80 digit itu lolos. <a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/DAY-ONE.md">Ikuti latihan lengkap dan cocokkan hasilnya</a>.</p></section>
-<section aria-labelledby="technical"><h2 id="technical">Untuk tim yang akan memasang di OCI</h2>
-<p>Latihan di laptop memakai rekaman sintetis dan SQLite. Di Batam, worker membaca gambar lewat model dan menyimpan hasil ke Oracle Database. Pada v0.4.2, layar pemeriksaan menjelaskan alasan satu NIK perlu dicek dan bagian cetakan yang perlu dicocokkan. Canary R2 diuji terpisah. Aturan awalan seri ada di branch staging.</p>
-<nav aria-label="Panduan engineer"><a href="https://github.com/orajsn/oci-kk-document-workbench/tree/v0.4.2">Repo dan README</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/OPERATIONS.md">Instalasi dan rollback</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/HANDOVER.md">Cek hasil di Oracle</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.2/docs/TUNING.md">Tuning per field</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/tree/f7120e67657812d1e1faece070f3f6aec5552e7b/experiments/form-serial-agreement">Aturan awalan seri dan tesnya</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.2">Catatan rilis</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/download/v0.4.2/FIF-KK-Panduan-Demo.zip">Unduh demo offline</a></nav></section>
-</main><footer>Untuk demo tanpa internet, ekstrak ZIP lalu buka Mulai-di-sini.html. Tautan ke GitHub memerlukan koneksi internet.</footer></body></html>
+<p>Open <code>http://127.0.0.1:8876</code>, choose <strong>Upload cards</strong> and enter <code>LATIHAN</code> under <strong>Batch reference</strong>. Select <strong>Recorded sample</strong> and upload both PNGs in <code>demo/day-one/</code> together.</p>
+<p>On card B, compare the second member’s NIK with the print, save a correction and restart the server using the same data directory. The <a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/DAY-ONE.md">first-batch walkthrough</a> shows how to reopen the correction and compare reread thresholds against the original readings.</p></section>
+<section aria-labelledby="cloud"><h2 id="cloud">Deploy and verify the OCI workflow</h2>
+<p>The local exercise uses recorded readings and SQLite. In OCI Batam, the worker reads images and stores household records, member rows and review history in Oracle Database. The portable release includes the private operator interface. The hosted participant gateway and staged form-serial rule are managed separately.</p>
+<nav aria-label="Engineering guides"><a href="https://github.com/orajsn/oci-kk-document-workbench/tree/v0.4.3">Source and README</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/OPERATIONS.md">Installation and rollback</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/HANDOVER.md">Oracle acceptance checks</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/TUNING.md">Field tuning</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/tree/2224dcfb050e2ff9101636adfbaa15a7aa53e75d/experiments/form-serial-agreement">Staged serial rule and tests</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.3">Release notes</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/download/v0.4.3/KK-Workbench-Demo.zip">Download the offline demo</a></nav></section>
+</main><footer>For offline review, extract the demo ZIP and open index.html. The engineering guides are available on GitHub.</footer></body></html>
