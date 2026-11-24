@@ -13,17 +13,17 @@
 <li>Return to the document list. Open the same card and choose <strong>Open decision</strong> to see the original reading and the saved decision.</li></ol>
 <p>This browser exercise uses two fictional records and saves decisions in this browser. It makes no model calls.</p></section>
 <section aria-labelledby="local"><h2 id="local">Try a bulk upload on your computer</h2>
-<p><a href="https://github.com/orajsn/oci-kk-document-workbench/archive/refs/tags/v0.4.3.zip">Download the source</a> and extract it. Open a terminal in the directory containing <code>run_local.py</code>. With Python 3.11 or later, run:</p>
+<p><a href="https://github.com/orajsn/oci-kk-document-workbench/archive/refs/tags/v0.4.4.zip">Download the source</a> and extract it. Open a terminal in the directory containing <code>run_local.py</code>. With Python 3.11 or later, run:</p>
 <pre>python run_local.py --port 8876 --data-dir runtime/day-one --reference-dir demo/day-one/reader</pre>
 <p>Open <code>http://127.0.0.1:8876</code>, choose <strong>Upload cards</strong> and enter <code>LATIHAN</code> under <strong>Batch reference</strong>. Select <strong>Recorded sample</strong> and upload both PNGs in <code>demo/day-one/</code> together.</p>
-<p>On card B, compare the second member’s NIK with the print, save a correction and restart the server using the same data directory. The <a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/DAY-ONE.md">first-batch walkthrough</a> shows how to reopen the correction and compare reread thresholds against the original readings.</p></section>
+<p>On card B, compare the second member’s NIK with the print, save a correction and restart the server using the same data directory. The <a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.4/docs/DAY-ONE.md">first-batch walkthrough</a> shows how to reopen the correction and compare reread thresholds against the original readings.</p></section>
 <section aria-labelledby="cloud"><h2 id="cloud">Deploy and verify the OCI workflow</h2>
 <p>The local exercise uses recorded readings and SQLite. In OCI Batam, the worker reads images and stores household records, member rows and review history in Oracle Database. The portable release includes the private operator interface. The hosted participant gateway and staged form-serial rule are managed separately.</p>
-<nav aria-label="Engineering guides"><a href="https://github.com/orajsn/oci-kk-document-workbench/tree/v0.4.3">Source and README</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/OPERATIONS.md">Installation and rollback</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/HANDOVER.md">Oracle acceptance checks</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.3/docs/TUNING.md">Field tuning</a>
+<nav aria-label="Engineering guides"><a href="https://github.com/orajsn/oci-kk-document-workbench/tree/v0.4.4">Source and README</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.4/docs/OPERATIONS.md">Installation and rollback</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.4/docs/HANDOVER.md">Oracle acceptance checks</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/blob/v0.4.4/docs/TUNING.md">Field tuning</a>
 <a href="https://github.com/orajsn/oci-kk-document-workbench/tree/2224dcfb050e2ff9101636adfbaa15a7aa53e75d/experiments/form-serial-agreement">Staged serial rule and tests</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.3">Release notes</a>
-<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/download/v0.4.3/KK-Workbench-Demo.zip">Download the offline demo</a></nav></section>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.4">Release notes</a>
+<a href="https://github.com/orajsn/oci-kk-document-workbench/releases/download/v0.4.4/KK-Workbench-Demo.zip">Download the offline demo</a></nav></section>
 </main><footer>For offline review, extract the demo ZIP and open index.html. The engineering guides are available on GitHub.</footer></body></html>
