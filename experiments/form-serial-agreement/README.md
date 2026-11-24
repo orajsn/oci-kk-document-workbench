@@ -1,22 +1,20 @@
-# Kapan awalan nomor seri bisa disimpan otomatis?
+# Recover a missing form-serial prefix
 
-Kadang angka nomor seri sudah terbaca, tapi huruf di sebelah kirinya hilang dari hasil ekstraksi. Di branch staging ini, aplikasi mengecek lagi tiga bagian pada baris cetakan yang sama. Label, huruf seri dan angka dibaca terpisah. Kalau hasilnya mendukung, aplikasi bisa melengkapi `household.form_serial` sebelum penyimpanan. Aturan ini hanya berlaku untuk seri formulir. NIK anggota punya alur pemeriksaan sendiri.
+A family card can have a printed serial with a letter prefix. The extractor sometimes reads the digits but drops the letters. This staged module checks the number label, prefix and digits separately on the same printed line before the caller saves `household.form_serial`.
 
-## Syaratnya apa?
+## When the rule applies
 
-Angka pada hasil tersimpan, ekstraksi utama dan hasil hybrid harus sama persis, termasuk nol di depan. Di bagian kiri header, OCR halaman harus menemukan satu pasangan label dan angka yang bersebelahan. Pastikan posisi itu bisa dipetakan kembali ke piksel asli pada job yang sama.
+The initial stored value, primary extraction and hybrid reading must agree on the digits, including leading zeros. Page OCR must identify a single adjacent label and number in the left header. The caller must bind that position back to the original pixels for the same job.
 
-OCR CPU membaca masing-masing potongan pada ukuran asli dan 3× tanpa melihat jawaban acuan. Dua bacaan label harus mengenali label nomor. Kedua bacaan huruf harus sama persis dengan awalan dari OCR halaman, dan kedua bacaan angka harus sama persis dengan angka semula. Kalau satu syarat gagal atau field itu sudah punya flag review, fungsi mengembalikan hasil yang diterima sebelumnya.
+Local CPU OCR reads each crop at native size and at 3× using bicubic scaling. Both label reads must identify a number label. Both prefix reads must exactly match the letters found by page OCR, and both digit reads must match the original number. If a condition fails or the field already carries a review flag, the existing result is returned. Member NIKs follow their own review path.
 
-## Mencoba dan memasang modul
+## Test and integrate
 
-Dari folder ini jalankan `python -m unittest -v test_serial_agreement` dengan Python 3.9+. Tes keputusan dan geometri memakai standard library. Untuk memotong gambar di pipeline OCR, `prefix_cells.py` memakai Pillow dan NumPy.
+Run `python -m unittest -v test_serial_agreement` in this directory with Python 3.9 or later. Decision and geometry tests use the standard library; pixel cropping uses Pillow and NumPy.
 
-1. Panggil `split_serial.pair(saved, primary, hybrid, ocr, frame)`. Ukuran frame dan koordinat OCR harus cocok. Bentuk input bisa dilihat di `test_serial_agreement.py`.
-2. Cocokkan gambar sumber, transformasi dan koordinat dengan job. Kalau koreksi perspektif membuat lokasi crop tidak bisa dipetakan kembali, hentikan baca ulang. Ambil potongan label dan huruf lewat `prefix_cells.cut(native_image, proposal['label_box'])`. Ambil angka di `proposal['number_box']`.
-3. Baca tiap potongan pada ukuran asli, lalu 3× dengan interpolasi bicubic. Isi `reads` dengan kunci `label`, `series` dan `number`. Tiap kunci berisi dua objek `{'text': ...}` sesuai urutan ukuran tadi.
-4. Panggil `serial_agreement.apply(saved, proposal, reads)` sebelum hasil disimpan. Aplikasi pemanggil tetap mengurus antrean review dan commit ke Oracle Database. Simpan hasil awal, identitas sumber dan bukti crop secara privat untuk audit. Pemeriksaan ini memakai OCR lokal tanpa panggilan Gemini.
+1. Call `split_serial.pair(saved, primary, hybrid, ocr, frame)`. The OCR coordinates must refer to that frame. See `test_serial_agreement.py` for the input shape.
+2. Verify the source, transform, job and coordinates. Stop if a perspective correction cannot be mapped back to original pixels. Take the label and prefix regions from `prefix_cells.cut(native_image, proposal['label_box'])` and the number from `proposal['number_box']`.
+3. Read each crop at native size and at 3× without a reference answer. Pass `reads` with keys `label`, `series` and `number`. Each holds two `{'text': ...}` objects in that scale order.
+4. Call `serial_agreement.apply(saved, proposal, reads)` before persistence. The calling application owns review routing and the Oracle commit. Keep the original reading, source identity and crop evidence privately for audit.
 
-## Kalau dua bacaan sama, bisa tetap salah?
-
-Bisa. Gambar 1× dan 3× berasal dari piksel yang sama dan dibaca oleh OCR yang sama. Kalau OCR halaman dan kedua crop sama-sama salah mengenali huruf, kesalahan itu bisa lolos. Sebelum aturan staging ini dipakai lebih luas, uji foto lain dengan variasi awalan dan cek mana yang salah tetapi ikut tersimpan.
+Both crop sizes use the same source and OCR engine. If the page and both crops misread the same letter, the rule can accept a wrong prefix. Test other printed prefixes on new documents before enabling the rule more broadly. This module makes no Gemini calls.

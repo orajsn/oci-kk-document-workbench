@@ -43,35 +43,35 @@ def image(repo, key, kind):
         cur.execute("SELECT c."+column+FROM+"WHERE "+repo._scope+" AND c.field_key=:fk",dict(repo._scope_binds,fk=key))
         row = cur.fetchone()
         if not row:
-            raise DomainError("NOT_FOUND","Kasus tidak ditemukan.",404)
+            raise DomainError("NOT_FOUND","Case not found.",404)
         value=row[0]
         return value.read() if hasattr(value,"read") else bytes(value)
 
 
 def decide(repo, key, body):
     if not isinstance(body,dict) or set(body)!={"action","value","expected_revision","request_id"}:
-        raise invalid("Isi permintaan review tidak sesuai.")
+        raise invalid("Invalid review request.")
     action,value,rev,rid = (body[k] for k in ("action","value","expected_revision","request_id"))
     if action not in ("confirm","correct","unreadable") or type(rev) is not int or not 0<=rev<1_000_000_000:
-        raise invalid("Keputusan atau versi tidak valid.")
+        raise invalid("Invalid decision or revision.")
     try:
         if str(UUID(rid))!=rid:raise ValueError
     except (TypeError,ValueError,AttributeError):
-        raise invalid("ID permintaan tidak valid.") from None
+        raise invalid("Invalid request ID.") from None
     if action=="correct":
         if not isinstance(value,str) or len(value)>60 or not re.fullmatch(r"[0-9]+(?:[ .-]+[0-9]+)*",value):
-            raise invalid("Ketik digit yang terlihat pada gambar.")
+            raise invalid("Enter the digits printed on the image.")
     elif value is not None:
-        raise invalid("Nilai koreksi hanya untuk tindakan koreksi.")
-    conflict=DomainError("VERSION_CONFLICT","Keputusan sudah berubah. Muat ulang kasus sebelum menyimpan.",409)
+        raise invalid("A corrected value is allowed only for a correction.")
+    conflict=DomainError("VERSION_CONFLICT","The decision changed. Reload the case before saving.",409)
     with repo._session(write=True) as con, con.cursor() as cur:
         cur.execute("SELECT c.ai_nik,c.legacy"+FROM+"WHERE "+repo._scope+" AND c.field_key=:fk",dict(repo._scope_binds,fk=key))
         case=cur.fetchone()
-        if not case:raise DomainError("NOT_FOUND","Kasus tidak ditemukan.",404)
+        if not case:raise DomainError("NOT_FOUND","Case not found.",404)
         if action=="correct":
             digits=re.sub(r"[ .-]","",value)
             if (not case[1] and len(digits)!=16) or digits==re.sub(r"[ .-]","",case[0]):
-                raise invalid("Periksa panjang NIK atau gunakan konfirmasi untuk nomor yang sama.")
+                raise invalid("Check the NIK length, or confirm if the number is unchanged.")
         def previous():
             cur.execute(f"SELECT revision,action,corrected_nik,operator_name FROM {EVENTS} WHERE field_key=:fk AND request_id=:rid",fk=key,rid=rid)
             old=cur.fetchone()
@@ -100,7 +100,7 @@ def routing_status(repo, job_id):
     with repo._session() as con, con.cursor() as cur:
         cur.execute(sql,dict(repo._scope_binds,job_key=job_id))
         row=cur.fetchone()
-        if row is None:raise DomainError('NOT_FOUND','Upload tidak ditemukan.',404)
+        if row is None:raise DomainError('NOT_FOUND','Upload not found.',404)
     status,enrolled,members,flagged,cleared,held,reads,existing=row
     if held is not None:
         return dict(stage='complete',members=members,flagged=flagged,cleared=cleared,review=held,reads=reads)

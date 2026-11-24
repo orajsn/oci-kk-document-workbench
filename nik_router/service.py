@@ -69,7 +69,7 @@ def prepare_image(data,profile,members):
 def tiles(im,profile,n):
     if not profile:
         hint=Image.new('RGB',(240,34),'white')
-        ImageDraw.Draw(hint).text((4,8),'Periksa baris pada gambar konteks.',fill='black')
+        ImageDraw.Draw(hint).text((4,8),'Check the member row in the context image.',fill='black')
         ctx=im.copy();ctx.thumbnail((1600,1600))
         return hint,ctx
     x,y,xx,yy=profile['boxes'][n-1];col=im.crop(profile['column'])
@@ -84,16 +84,16 @@ def tiles(im,profile,n):
 
 def reasons(flags,state,same,uncertain):
     orig=flags['reasons'];messages=[]
-    if 'invalid_format' in orig:messages.append('Nomor tersimpan tidak memenuhi format 16 digit. Periksa format yang tercetak.')
-    if 'duplicate' in orig:messages.append('Nomor yang sama muncul pada beberapa anggota.')
-    if 'birth_conflict' in orig:messages.append('Bagian tanggal atau kode jenis kelamin pada NIK berbeda dengan data anggota.')
-    if 'model_missing_or_disagrees' in orig:messages.append('Bacaan awal atau hybrid kosong atau berbeda dari nilai tersimpan.')
-    if 'no_unique_clear_ocr' in orig:messages.append('OCR belum menguatkan satu baris dengan seluruh digit yang sama.')
-    if state=='unlocated':messages.append('Lokasi baris belum terverifikasi. Periksa gambar konteks.')
-    elif state!='returned':messages.append('Pembacaan ulang belum dapat dikonfirmasi. Periksa crop.')
+    if 'invalid_format' in orig:messages.append('The saved number does not match the 16-digit format. Check the format printed on the card.')
+    if 'duplicate' in orig:messages.append('The same number appears on several members.')
+    if 'birth_conflict' in orig:messages.append('The NIK date or sex code differs from the member data.')
+    if 'model_missing_or_disagrees' in orig:messages.append('The initial or hybrid reading is missing or differs from the saved number.')
+    if 'no_unique_clear_ocr' in orig:messages.append('OCR did not confirm a unique row with all the same digits.')
+    if state=='unlocated':messages.append('The row location is unverified. Check the context image.')
+    elif state!='returned':messages.append('The reread could not be confirmed. Check the crop.')
     else:
-        messages.append('Digit bacaan ulang cocok dengan hasil tersimpan.' if same else 'Bacaan ulang berbeda atau mengandung digit yang tidak terbaca.')
-        if uncertain:messages.append('Gemini menandai crop sebagai ragu.')
+        messages.append('The reread matches the saved digits.' if same else 'The reread differs or contains unreadable digits.')
+        if uncertain:messages.append('The model marked the crop as uncertain.')
     return messages
 
 
@@ -134,11 +134,11 @@ def process(connect,reader,profiles,cfg,job,version,digest,payload):
                               locator='verified_profile' if geometry else 'ocr_row' if n in generic else 'unlocated'))
             if clear:continue
             legacy='invalid_format' in f['reasons']
-            topic=('Lokasi belum pasti' if state=='unlocated' else 'Format NIK' if legacy else 'Konflik data' if f['structural']
-                   else 'Bacaan berbeda' if not same else 'Digit samar')
+            topic=('Row location uncertain' if state=='unlocated' else 'NIK format' if legacy else 'Conflicting data' if f['structural']
+                   else 'Readings differ' if not same else 'Unclear digit')
             held.append(dict(k=sha(f'auto-nik-v1:{job}:{version}:{n}'.encode())[:24],jid=job,ver=version,
                              src=digest,alias=((profile['alias'] if profile else 'KK')+'-'+job.replace('-','')[:6].upper()),
-                             n=n,nik=original or '(kosong)',topic=topic,flags=json.dumps(reasons(f,state,same,uncertain),ensure_ascii=False),
+                             n=n,nik=original or '(empty)',topic=topic,flags=json.dumps(reasons(f,state,same,uncertain),ensure_ascii=False),
                              structural=int(f['structural']),legacy=int(legacy),width=tile.width,crop=as_png(tile),ctx=as_png(ctx)))
     # Result receipt and cases become visible together. No MERGE or UPDATE of existing reviews.
     cn=connect()

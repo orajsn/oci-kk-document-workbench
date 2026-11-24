@@ -1,21 +1,21 @@
-# Memastikan crop jatuh di baris anggota yang benar
+# Keep each crop on the correct member row
 
-Kalau NIK terbaca jelas tetapi ternyata milik anggota di sebelahnya, cek dulu posisi crop pada gambar asli. Mulai dari gambar yang diizinkan, periksa orientasi EXIF, lalu terapkan crop manual dan rotasi sesuai konfigurasi input. Cocokkan nomor baris, batas tabel, dan hash piksel. Setelah yakin anggotanya benar, baru nilai apakah digitnya terbaca.
+A sharply read NIK can still belong to the wrong person. Check the crop against the original image before diagnosing an OCR or model error. Apply the recorded EXIF orientation, crop and rotation, then verify the table boundaries, printed row number and pixel hash.
 
-## Coba dengan gambar latihan
+## Run the geometry example
 
 ```sh
 python examples/make_focus_fixture.py --output runtime/focus-example.json
 ```
 
-Perintah ini membagi gambar contoh menjadi dua area, menghitung hash yang dibutuhkan, lalu mengecek kedua crop dengan pembaca manifest yang dipakai aplikasi. Koordinat contoh hanya berlaku untuk gambar itu. Untuk layout customer, periksa posisi setiap anggota pada foto yang diizinkan. Simpan manifest dan SHA-256 di lokasi privat yang dibaca validator. Isi `reference_values_included` harus `false`.
+The example creates two regions, calculates their hashes and validates them with the application's manifest reader. Its coordinates apply only to that fixture. For a new layout, inspect every member on authorized images and store the manifest and its SHA-256 privately. Keep `reference_values_included` set to `false`.
 
-## File mana yang mengatur apa?
+## Which manifest controls the crop?
 
-**Area tabel untuk pembacaan terarah.** Manifest `kk-focused-source-geometry-1.0` menyimpan satu record per hash gambar sumber. Isinya mencakup aturan crop dan rotasi, ukuran serta hash piksel gambar setelah transformasi, lalu dua kotak berurutan, `name_table` dan `middle_member_table`. Setiap kotak memakai koordinat `[left, top, right, bottom]` dalam piksel pada gambar tersebut. Catat juga ukuran dan hash piksel masing-masing crop. Nilai `review_record_sha256` mengikat manifest ke catatan pemeriksaan posisi.
+| File or contract | What it binds |
+| --- | --- |
+| `kk-focused-source-geometry-1.0` | One record per source hash. Records the transform, canonical dimensions and pixel hash, followed by `name_table` and `middle_member_table`. Each box uses `[left, top, right, bottom]` in transformed-image pixels, plus its crop size and pixel hash. `review_record_sha256` links to the geometry review. |
+| `nik_router/crop-profiles.json` | Associates a source hash with its alias, transform, `canonical_sha`, NIK and name column boxes, and a member box relative to the NIK column. The two columns must share the same vertical extent. Without a profile, the router looks for the NIK header and matches names to OCR rows on the verified frame. An uncertain row goes to review. |
+| `paddle-server-models-1.0` | The `files` mapping pins each relative model file to its SHA-256. Verify the source and version of the weights, then hash `inference.json`, `inference.yml` and `inference.pdiparams` for each model. The configuration also pins the manifest itself. |
 
-**Baris anggota untuk review NIK.** Di `nik_router/crop-profiles.json`, setiap hash sumber dipasangkan dengan alias, transformasi, `canonical_sha`, kotak kolom NIK dan nama, serta satu kotak per anggota yang posisinya relatif terhadap kolom NIK. Batas vertikal kolom nama dan NIK harus sama. Kalau profil belum tersedia, router mencari header NIK dan mencocokkan nama dengan baris OCR pada frame yang sudah diverifikasi. Kalau anggotanya masih belum jelas, teruskan ke petugas.
-
-**File model OCR.** Pada manifest `paddle-server-models-1.0`, bagian `files` memasangkan path relatif dengan SHA-256. Untuk tiap model, catat hash `inference.json`, `inference.yml` dan `inference.pdiparams` setelah asal dan versi bobot diverifikasi. Konfigurasi aplikasi menyimpan lokasi dan hash manifest itu sendiri.
-
-Saat membandingkan ukuran asli dengan zoom, pakai koordinat sumber dan transformasi yang sama. Kalau crop bergeser satu baris, catat sebagai salah anggota walaupun semua digitnya terbaca.
+Use the same source pixels and transform when comparing native size and zoom. Count a crop on the neighboring row as a member-assignment error even if every digit looks plausible.

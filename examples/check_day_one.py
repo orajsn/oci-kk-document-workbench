@@ -34,13 +34,13 @@ def read_batch(port, batch):
 
     config = read("config")
     if config.get("local_only") is not True or config.get("live_oci_enabled") is not False:
-        raise ValueError("Gunakan server run_local.py pada port latihan.")
+        raise ValueError("Use the run_local.py server on the practice port.")
     pattern = re.compile(re.escape(batch) + r"-00[12]")
     jobs = [j for j in read("jobs?" + urlencode({"query": batch}))["jobs"] if pattern.fullmatch(j["case_id"])]
     if len(jobs) != 2 or len({j["case_id"] for j in jobs}) != 2:
-        raise ValueError("Perlu satu batch unik berisi kedua kartu. Periksa Case ID atau gunakan prefix baru.")
+        raise ValueError("Expected a unique batch containing both cards. Check the case reference or use a fresh prefix.")
     if any(j["mode"] != "reference" or j["status"] not in {"NEEDS_REVIEW","ACCEPTED"} for j in jobs):
-        raise ValueError("Tunggu kedua hasil Reference replay selesai. Periksa status dan mode di daftar.")
+        raise ValueError("Wait for both recorded samples to finish. Check the status and reading mode in the list.")
     return [read(f"jobs/{j['id']}/export") for j in jobs]
 
 
@@ -48,7 +48,7 @@ def rows(extraction):
     members = extraction["members"]
     numbers = {str(m["row_number"]): m["nik_raw"] for m in members}
     if len(numbers) != len(members):
-        raise ValueError("Nomor anggota muncul dua kali.")
+        raise ValueError("The same member row appears twice.")
     return numbers
 
 
@@ -57,20 +57,20 @@ def report(exports, thresholds, require_review):
     key = load_json(CARDS / "print-key.json")
     by_source = {e["job"]["sha256"]: e for e in exports}
     if set(by_source) != set(signals) or set(key) != set(signals):
-        raise ValueError("Hash batch berbeda dari dua kartu latihan.")
+        raise ValueError("Batch hashes differ from the two supplied practice cards.")
     counts = {t: [0, 0, 0] for t in thresholds}
     verified_edits = original_hits = final_hits = slots = 0
     for digest, evidence in signals.items():
         job = by_source[digest]
         if hashlib.sha256((CARDS / evidence["filename"]).read_bytes()).hexdigest() != digest:
-            raise ValueError("Gambar latihan lokal berubah.")
+            raise ValueError("The local practice image has changed.")
         history = job["review_history"]
         last = job["extraction"]
         original = history[0]["previous_extraction"] if history else last
         raw = rows(original)
         final = rows(last)
         if raw != rows(evidence["primary"]) or set(raw) != set(key[digest]) or set(final) != set(raw):
-            raise ValueError("Baris hasil awal atau nomor anggota berubah. Periksa batch.")
+            raise ValueError("Original rows or member numbers have changed. Check the batch.")
         for field, expected in key[digest].items():
             slots += 1
             original_hits += raw[field] == expected
@@ -79,7 +79,7 @@ def report(exports, thresholds, require_review):
                 verified_edits += 1
         changes = sum(final[n] != v for n, v in raw.items())
         print(f"{evidence['filename']} | {job['job']['case_id']} | job {job['job']['id']} | "
-              f"versi {job['job']['version']} | {len(history)} review | {changes} NIK berubah")
+              f"version {job['job']['version']} | {len(history)} review | {changes} NIK(s) changed")
         for threshold, tally in counts.items():
             flags = classify(original, evidence["primary"], evidence["hybrid"], evidence["ocr"], 0,
                              min_confidence=threshold)
@@ -90,12 +90,12 @@ def report(exports, thresholds, require_review):
                 tally[0] += reread
                 tally[1] += wrong and not reread
                 tally[2] += not wrong and reread
-    print(f"NIK cocok dengan cetakan: awal {original_hits}/{slots}, tersimpan {final_hits}/{slots}.")
-    print("Ambang OCR | NIK ke baca ulang | Salah lolos | Benar ikut baca ulang")
+    print(f"NIKs matching print: original {original_hits}/{slots}, saved {final_hits}/{slots}.")
+    print("OCR threshold | Sent for reread | Wrong NIKs passed | Correct NIKs reread")
     for t, tally in counts.items():
         print(f"{t:.2f}       | {tally[0]:17} | {tally[1]:11} | {tally[2]:21}")
     if require_review and (verified_edits != 1 or final_hits != slots):
-        raise ValueError("Koreksi NIK di kartu B sesuai cetakan, simpan, lalu jalankan lagi.")
+        raise ValueError("Correct the card B NIK to match the print, save the review and run the check again.")
 
 
 if __name__ == "__main__":
@@ -103,10 +103,10 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8876)
     parser.add_argument("--batch", default="LATIHAN")
     parser.add_argument("--compare", nargs="+", type=float, default=[0.83, 0.80],
-                        help="Ambang pembanding. Default router selalu ditampilkan.")
+                        help="Comparison thresholds. The router default is always shown.")
     parser.add_argument("--require-review", action="store_true")
     args = parser.parse_args()
     try:
         report(read_batch(args.port, args.batch), [OCR_MIN_CONFIDENCE, *args.compare], args.require_review)
     except (ValueError, URLError, OSError, KeyError) as exc:
-        parser.exit(1, f"Latihan belum lulus: {exc}\n")
+        parser.exit(1, f"Practice check failed: {exc}\n")

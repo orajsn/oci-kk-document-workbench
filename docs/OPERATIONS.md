@@ -1,78 +1,78 @@
-# Memasang dan menjalankan pilot KK di OCI Batam
+# Run the private OCI deployment
 
-Di Batam, API menerima upload, Object Storage menyimpan foto, dan Oracle Database menyimpan hasil per KK. Worker mengakses layanan OCI lewat instance principal. Sebelum memasang, sepakati tag aplikasi, resource tenancy, operator yang boleh masuk, dan tujuan pemrosesan model. Untuk latihan lokal dengan SQLite, pakai [panduan bulk upload](DAY-ONE.md).
+The API accepts images in Batam, Object Storage keeps the originals, and Oracle Autonomous Database stores household and member records. A worker retrieves jobs from OCI Queue. The VM signs OCI requests with its instance principal. The routing profile forwards inference requests to the approved model endpoint outside Indonesia.
 
-## Siapkan VM dan database
+Use this runbook for a private operator installation. The public source package does not provision the hosted pilot's participant login or HTTPS gateway. To run the two-card exercise without cloud resources, start with [First batch](DAY-ONE.md).
 
-Siapkan VM Linux dengan Python 3.11 dan cgroup v2, jaringan privat, Autonomous Database, bucket dengan versioning, OCI Queue, routing profile untuk model vision, serta jalur akses operator. Kalau memakai [template Terraform](../infra/README.md), jalankan `terraform init`, `terraform validate` dan `terraform plan` di lingkungan penerima. Pembuatan resource secara default dinonaktifkan. Cek plan sebelum mengaktifkannya.
+## Prepare the VM and database
 
-Pasang aplikasi di `/opt/kk-pilot/current` dan virtual environment di `/opt/kk-pilot/venv`. Buat user layanan `kkpilot`.
+Provision a private Linux VM with Python 3.11 and cgroup v2, private network access, an Autonomous Database, a versioned bucket, OCI Queue, an approved routing profile for the vision model, and an operator access path. If you use the [Terraform template](../infra/README.md), run `terraform init`, `terraform validate` and `terraform plan` in the receiving tenancy. Resource creation defaults to disabled. Review the plan before enabling billable resources.
 
-DBA menyiapkan akun `KK_OWNER`, `KK_RUNTIME` dan `KK_IMPORTER`. Jalankan `sql/00_account_grants.sql` sebagai administrator. Kemudian sebagai pemilik skema, jalankan skrip di folder `sql/` sesuai urutan berikut.
+Install the application at `/opt/kk-pilot/current` with its virtual environment at `/opt/kk-pilot/venv`. Create the `kkpilot` service account.
 
-1. `01_schema.sql` dan `02_runtime_grants.sql`
-2. `04_cloud_schema.sql` dan `05_cloud_grants.sql`
-3. `06_nik_review.sql` dan `07_nik_router.sql`
+The DBA prepares `KK_OWNER`, `KK_RUNTIME` and `KK_IMPORTER`. Run `sql/00_account_grants.sql` as administrator. As the schema owner, run the following files from `sql/` in this order.
 
-`03_operational_queries.sql` berisi query untuk operator. Oracle DDL melakukan commit implisit. Kalau instalasi berhenti di tengah, periksa dulu objek yang sudah terbentuk sebelum melanjutkan.
+1. `01_schema.sql`, then `02_runtime_grants.sql`
+2. `04_cloud_schema.sql`, then `05_cloud_grants.sql`
+3. `06_nik_review.sql`, then `07_nik_router.sql`
 
-## Hubungkan aplikasi ke resource yang disetujui
+`03_operational_queries.sql` contains operator queries. Oracle DDL commits implicitly. If installation stops partway through, inspect the objects already created before resuming.
 
-Salin `kkpilot/cloud/config.example.json` ke `/etc/kk-pilot/cloud.json` dan `deploy/runtime.env.example` ke `/etc/kk-pilot/runtime.env`. Keduanya berada di VM.
+## Configure the OCI connections
 
-- Isi compartment, host dan service database privat, Queue OCID dan messages endpoint, namespace, bucket, routing profile, scope pilot, serta hash gambar yang boleh diproses.
-- Cocokkan `KK_OCI_COMPARTMENT_OCID` dan `KK_OCI_ROUTING_PROFILE_OCID` di environment dengan resource yang disetujui di JSON. Validator memeriksa kedua sumber konfigurasi ini.
-- Simpan password database, wallet mTLS dan password wallet di tempat penyimpanan secret tim. Batasi akses ke file environment yang dibaca systemd. Tetapkan identitas operator yang akan tercatat pada keputusan review.
-- Isi flag persetujuan data dan biaya, referensi izin dataset, serta nilai `ack` sesuai `kkpilot/cloud/config.py`. Konfigurasi Gemini contoh memerlukan persetujuan pemrosesan di Google Americas. Pastikan izin dari pemilik data mencakup gambar yang dikirim ke provider.
+Copy `kkpilot/cloud/config.example.json` to `/etc/kk-pilot/cloud.json` and `deploy/runtime.env.example` to `/etc/kk-pilot/runtime.env` on the VM.
 
-Jalankan kedua perintah ini dengan environment yang sama seperti service.
+- Set the compartment, private database host and service, queue OCID and messages endpoint, namespace, bucket, routing profile, pilot scope and approved image hashes.
+- Match the independent environment pins `KK_OCI_COMPARTMENT_OCID` and `KK_OCI_ROUTING_PROFILE_OCID` to the approved resources in the JSON configuration.
+- Keep the database password, mTLS wallet and wallet password in your team's secret store. Restrict access to the systemd environment file. Configure the operator identity recorded with each decision.
+- Set the data-processing and spending approvals, dataset authorization reference and acknowledgement required by `kkpilot/cloud/config.py`. Confirm that the data owner has approved the model and actual processing destination for those images.
+
+Run these commands with the same environment as the service.
 
 ```sh
 python -m kkpilot.cloud plan --config /etc/kk-pilot/cloud.json
 python -m kkpilot.cloud preflight --config /etc/kk-pilot/cloud.json
 ```
 
-Periksa status dan masalah yang dilaporkan untuk model, tujuan, lease, visibility timeout dan batas panggilan. Untuk memeriksa koneksi ke layanan cloud, gunakan `preflight` dengan `--execute` dari VM privat yang sudah memiliki environment dan wallet. Batasi policy IAM ke bucket, queue, model/profile serta compartment yang dipakai. Router memakai endpoint inferensi yang sama.
+Inspect the reported model, destination, lease, visibility timeout and call budget. Use `preflight --execute` from the configured private VM to probe cloud resources. Restrict IAM policies to the approved bucket, queue, model/profile and compartment. The router uses the same inference endpoint.
 
-## Pasang OCR dan tentukan posisi crop
+## Install OCR and verify the image coordinates
 
-Pasang `kkpilot/cloud/requirements.operator.txt` di environment aplikasi. OCR memakai venv terpisah di `/opt/kk-pilot/ocr-runtime-v1/venv` dengan dependensi dari `deploy/requirements-ocr.txt`. Ambil **PP-OCRv5_mobile_det_infer** dan **PP-OCRv5_server_rec_infer** dari distribusi PaddleOCR. Tempatkan keduanya di `/opt/kk-pilot/ocr-runtime-v1/models`.
+Install `kkpilot/cloud/requirements.operator.txt` in the application environment. OCR uses a separate environment under `/opt/kk-pilot/ocr-runtime-v1/venv` and the packages in `deploy/requirements-ocr.txt`. Obtain **PP-OCRv5_mobile_det_infer** and **PP-OCRv5_server_rec_infer** from PaddleOCR and place them under `/opt/kk-pilot/ocr-runtime-v1/models`.
 
-Periksa lisensi, checksum unduhan, dan dependensi native untuk VM tersebut. Catat hash manifest model yang terpasang. `local_paddle_ocr.verify_models` memeriksa hash file. `check_resource_limits` memeriksa CPU, RAM, swap dan PID. Worker OCR memakai user dan network namespaces pada kernel. Coba sebagai user layanan dengan batas cgroup yang akan dipakai.
+Verify licensing, download checksums and native dependencies for the VM. Pin the installed model manifest. `local_paddle_ocr.verify_models` checks file hashes and `check_resource_limits` checks CPU, RAM, swap and PID limits. Run a smoke test as the service account with the intended cgroup limits. The OCR worker requires kernel user and network namespaces.
 
-Konfigurasi awal menjalankan jalur Gemini penuh setelah operator menyetujuinya. Untuk OCR hybrid, siapkan manifest privat yang menentukan area gambar, aktifkan `focused_refinement_enabled` dan `local_ocr.enabled`, lalu atur anggaran panggilan sesuai validator. `field_corroboration_enabled`, `nik_row_alignment_enabled` dan pembacaan tiga arah bersifat opsional dan punya prasyarat masing-masing. Jalur tiga arah memerlukan persetujuan Document Understanding serta anggaran panggilan tambahan. Cek crop pada gambar kalibrasi yang boleh dipakai. [Cara mencocokkan crop ke anggota](GEOMETRY.md)
+The initial approved configuration uses the full-image Gemini path. For hybrid OCR, prepare the private source-region manifest, enable `focused_refinement_enabled` and `local_ocr.enabled`, and set the budget required by the validator. Field corroboration (`field_corroboration_enabled`), row alignment (`nik_row_alignment_enabled`) and three-way reading each have additional prerequisites. Three-way reading requires Document Understanding authorization and its additional call budget. [Verify crop geometry on approved calibration images](GEOMETRY.md).
 
-## Nyalakan service dan cek satu job
+## Start the services
 
-Buat `/var/lib/kk-pilot` beserta subdirektori `tmp`, `diagnostics` dan `bulk-nik-router`. Tetapkan user layanan sebagai pemilik dan batasi akses. Router memakai data diagnostik yang dapat berisi identitas. Tentukan retensinya bersama pemilik data.
+Create `/var/lib/kk-pilot` and its `tmp`, `diagnostics` and `bulk-nik-router` directories with service ownership and private permissions. The router reads diagnostic records that may contain personal information. Agree on retention with the data owner.
 
-Salin `nik_router/` ke `/opt/kk-pilot/nik-router/current`. Profil crop awal berupa objek JSON kosong. Dalam kondisi ini locator memakai OCR untuk mencari anggota. Kalau lokasi baris belum jelas, NIK perlu diperiksa petugas. Pada jalur input utama, hash gambar tetap harus termasuk dalam daftar yang disetujui.
+Copy `nik_router/` to `/opt/kk-pilot/nik-router/current`. The initial crop profile is an empty JSON object. The locator can use OCR to identify a member row. If the row cannot be located reliably, the NIK needs review. The portable intake still requires an approved source-image hash.
 
-Pasang unit dari `deploy/` dan periksa `ExecStart`. Aktifkan scope di SQLcl sebagai `KK_OWNER` sebelum menyalakan timer router.
+Install the units from `deploy/` and check their `ExecStart` paths. Activate the correct database scope before starting the router timer.
 
 ```sh
 sudo systemctl daemon-reload
 sudo systemctl enable --now kk-pilot-api.service kk-pilot-dispatcher.service kk-pilot-worker.service
-# Sebagai KK_OWNER di SQLcl, untuk scope yang sama dengan cloud.json:
+# In SQLcl as KK_OWNER, use the scope from cloud.json:
 # @deploy/activate-scope.sql my-approved-pilot
 sudo systemctl enable --now kk-pilot-nik-router.timer
 ```
 
-Buka aplikasi lewat tunnel ke port loopback 8765 pada VM. Akses cloud memakai scope, token CSRF dan identitas operator di jalur privat. Saat mencoba satu upload, ikuti job dari bukti penerimaan, gambar di bucket, worker dan commit Oracle sampai status di `/api/jobs/<id>/nik-routing`. Router hanya mengambil hasil `MODEL` dalam scope sejak waktu aktivasi di Oracle. [Langkah mengecek keputusan yang sudah tersimpan](HANDOVER.md#uji-bulk-dan-review-di-oci)
+Access the application through a private tunnel to loopback port 8765. The operator interface uses scope controls, a CSRF token and a configured operator identity. For one upload, follow the receipt, object version, worker attempt, Oracle commit and `/api/jobs/<id>/nik-routing` status. The router selects `MODEL` records in the configured scope starting at the database activation time. [Verify a stored decision](HANDOVER.md#verify-a-batch-in-oci).
 
-## Pantau antrean dan rollback
+## Monitor and roll back
 
-Cek `systemctl status kk-pilot-{api,dispatcher,worker}.service`, `systemctl status kk-pilot-nik-router.timer` dan journal masing-masing layanan. Pantau umur job tertua, waktu upload sampai commit, waktu sampai routing selesai, NIK salah yang lolos, jumlah NIK ke petugas serta panggilan dan token per job. Keputusan petugas ditambahkan sebagai event dengan request ID dan revisi yang diharapkan. Hasil awal AI tetap tersedia.
+Check `systemctl status kk-pilot-{api,dispatcher,worker}.service`, `systemctl status kk-pilot-nik-router.timer` and each service's journal. Monitor the oldest queued job, upload-to-commit time, routing completion, incorrect NIKs that passed, operator workload, and calls and tokens per job. Review events carry a request ID and expected revision. The original AI extraction remains available.
 
-Sebelum mengganti build, tag versi lama dan baru. Simpan konfigurasi, hash dan backup secara privat. Untuk rollback router, hentikan timer, tunggu worker selesai dengan job aktif, kembalikan aplikasi atau worker ke build yang sudah diuji, lalu restart service yang berubah. Pertahankan record Oracle, gambar dan ledger. Buka hasil lama dan salah satu keputusan petugas untuk memastikan keduanya masih terbaca.
+Tag the old and new application and router builds. Keep configuration, hashes and backups privately. To roll back the router, stop its timer, allow active work to finish, restore the previously tested build and restart the changed services. Preserve Oracle records, source images and receipts. Reopen an earlier result and decision to verify recovery.
 
-## Siapa perlu akses apa?
+| Component | Required access |
+| --- | --- |
+| API and worker | Queue messages, versioned private objects, routing-profile reads and approved inference calls via instance principal. |
+| `KK_RUNTIME` | Read scoped records and insert extractions, cases and review events according to the SQL grants. |
+| DBA | Manage schemas, grants, private connectivity, credentials and wallet and activate the post-save scope after configuration acceptance. |
+| NIK router | Read the private API and diagnostic evidence, make one reread attempt for a flagged row when its crop is reliable, and record cases and receipts idempotently. |
 
-| Komponen | Akses yang dipakai |
-|---|---|
-| API dan worker (instance principal) | Mengelola pesan di queue yang ditentukan, membaca dan menulis versi object di bucket privat, membaca routing profile dan memanggil inferensi yang disetujui. |
-| `KK_RUNTIME` | Membaca hasil dalam scope pilot, menambah ekstraksi, kasus dan event review sesuai grant pada skrip SQL. |
-| DBA | Membuat skema dan grant, menyiapkan private endpoint, kredensial dan wallet, lalu mengaktifkan scope setelah konfigurasi diterima. |
-| Router | Membaca sumber melalui API loopback dan data diagnostik. Untuk baris yang ditandai, router mencoba satu kali baca ulang jika crop dapat dipastikan. Penyimpanan receipt dan kasus menangani pengulangan tanpa membuat duplikat. |
-
-Periksa policy bersama admin tenancy. Berikan izin Document Understanding hanya bila jalur itu aktif. VM diakses secara privat. Untuk demo web publik gunakan gambar fiktif.
+Review policies with the tenancy administrator. Grant Document Understanding access only when that path is enabled. Use fictional images in the public browser demo.
