@@ -1,19 +1,22 @@
-# Awalan Nomor Seri Formulir
+# Kapan awalan nomor seri bisa disimpan otomatis?
 
-Modul staging ini melengkapi nomor seri sebelum hasil ekstraksi disimpan. Modul memerlukan hasil ekstraksi utama, hasil hybrid, OCR halaman beserta koordinat, dan dua pembacaan per potongan gambar. Modul ini dapat diuji tanpa akun cloud.
+Kadang angka nomor seri sudah terbaca, tapi huruf di sebelah kirinya hilang dari hasil ekstraksi. Di branch staging ini, aplikasi mengecek lagi tiga bagian pada baris cetakan yang sama. Label, huruf seri dan angka dibaca terpisah. Kalau hasilnya mendukung, aplikasi bisa melengkapi `household.form_serial` sebelum penyimpanan. Aturan ini hanya berlaku untuk seri formulir. NIK anggota punya alur pemeriksaan sendiri.
 
-## Jalankan tes
+## Syaratnya apa?
 
-Pakai Python 3.9 atau lebih baru. Dari folder ini jalankan `python -m unittest -v test_serial_agreement`. Tes keputusan dan geometri hanya memakai standard library Python. Pemotongan piksel pada `prefix_cells.py` memakai Pillow dan NumPy yang tersedia di pipeline OCR.
+Angka pada hasil tersimpan, ekstraksi utama dan hasil hybrid harus sama persis, termasuk nol di depan. Di bagian kiri header, OCR halaman harus menemukan satu pasangan label dan angka yang bersebelahan. Pastikan posisi itu bisa dipetakan kembali ke piksel asli pada job yang sama.
 
-## Sambungkan ke aplikasi
+OCR CPU membaca masing-masing potongan pada ukuran asli dan 3× tanpa melihat jawaban acuan. Dua bacaan label harus mengenali label nomor. Kedua bacaan huruf harus sama persis dengan awalan dari OCR halaman, dan kedua bacaan angka harus sama persis dengan angka semula. Kalau satu syarat gagal atau field itu sudah punya flag review, fungsi mengembalikan hasil yang diterima sebelumnya.
 
-1. Panggil `split_serial.pair(saved, primary, hybrid, ocr, frame)`. Format data contoh ada di `test_serial_agreement.py`. Koordinat OCR harus sesuai dengan ukuran frame. Kandidat hanya muncul jika tiga nilai numerik sama dan pada bagian kiri header ada satu pasangan label dan angka yang bersebelahan.
-2. Cocokkan sumber, transformasi, dan koordinat dengan gambar asli untuk job tersebut. Jika gambar telah diluruskan dengan perspektif dan koordinat tidak dapat dipetakan kembali, hentikan pembacaan tambahan. Baca dua potongan dari `prefix_cells.cut(native_image, proposal['label_box'])` serta potongan di `proposal['number_box']`.
-3. Baca masing-masing potongan pada ukuran asli lalu pembesaran bicubic 3× dengan OCR CPU tanpa memberikan teks acuan. Kirim hasil dengan kunci `label`, `series`, dan `number`; tiap nilai memuat dua objek `{'text': ...}`, sesuai urutan ukuran.
-4. Panggil `serial_agreement.apply(saved, proposal, reads)` sebelum persistensi. Respons baru hanya dapat melengkapi `household.form_serial`. Digit termasuk nol di awal harus identik. Bila bukti gagal, nilai sebelumnya diteruskan ke alur review aplikasi. Keputusan review yang sudah ada pada field ini menghalangi koreksi otomatis.
-5. Simpan hasil awal, identitas sumber dan bukti crop secara privat untuk audit. Modul ini tidak memanggil Gemini, mengatur antrean review, atau menulis ke Oracle Database.
+## Mencoba dan memasang modul
 
-## Batas bukti
+Dari folder ini jalankan `python -m unittest -v test_serial_agreement` dengan Python 3.9+. Tes keputusan dan geometri memakai standard library. Untuk memotong gambar di pipeline OCR, `prefix_cells.py` memakai Pillow dan NumPy.
 
-Kedua pembesaran memakai piksel sumber dan OCR yang sama. Jika OCR halaman dan kedua crop sama-sama keliru, kesalahan itu dapat lolos. Uji pada lebih banyak formulir dengan variasi awalan sebelum mengaktifkan aturan secara umum. Modul ini hanya menangani nomor seri formulir; data identitas anggota tidak disentuh.
+1. Panggil `split_serial.pair(saved, primary, hybrid, ocr, frame)`. Ukuran frame dan koordinat OCR harus cocok. Bentuk input bisa dilihat di `test_serial_agreement.py`.
+2. Cocokkan gambar sumber, transformasi dan koordinat dengan job. Kalau koreksi perspektif membuat lokasi crop tidak bisa dipetakan kembali, hentikan baca ulang. Ambil potongan label dan huruf lewat `prefix_cells.cut(native_image, proposal['label_box'])`. Ambil angka di `proposal['number_box']`.
+3. Baca tiap potongan pada ukuran asli, lalu 3× dengan interpolasi bicubic. Isi `reads` dengan kunci `label`, `series` dan `number`. Tiap kunci berisi dua objek `{'text': ...}` sesuai urutan ukuran tadi.
+4. Panggil `serial_agreement.apply(saved, proposal, reads)` sebelum hasil disimpan. Aplikasi pemanggil tetap mengurus antrean review dan commit ke Oracle Database. Simpan hasil awal, identitas sumber dan bukti crop secara privat untuk audit. Pemeriksaan ini memakai OCR lokal tanpa panggilan Gemini.
+
+## Kalau dua bacaan sama, bisa tetap salah?
+
+Bisa. Gambar 1× dan 3× berasal dari piksel yang sama dan dibaca oleh OCR yang sama. Kalau OCR halaman dan kedua crop sama-sama salah mengenali huruf, kesalahan itu bisa lolos. Sebelum aturan staging ini dipakai lebih luas, uji foto lain dengan variasi awalan dan cek mana yang salah tetapi ikut tersimpan.
