@@ -1,35 +1,29 @@
-# Riwayat rilis
+# Changelog
+
+## 0.4.3 · 2026-11-24
+
+The public workbench, browser demo and engineering guides now use English. The first-batch guide follows one fictional member from the printed NIK to the stored correction and explains how to test a reread threshold on the same batch. The hosted participant pilot is managed separately.
 
 ## 0.4.2 · 2026-11-24
 
-Saat upload beberapa KK, petugas bisa melihat berapa berkas yang sudah diterima, gagal dikirim, atau masih perlu dicek status pengirimannya. Setelah data KK tersimpan, halaman hasil menunjukkan jumlah NIK yang masuk antrean petugas.
-
-Di layar pemeriksaan, alasan kasus muncul di atas gambar beserta bagian yang perlu dicocokkan. Misalnya, bila sistem mencatat perbedaan pada digit kelima dari kiri, layar menyebut posisi itu. Kalau posisi digit belum diketahui, petugas diminta membandingkan cetakan dari kiri ke kanan. Rincian asli tetap bisa dibuka. Demo dua KK fiktif memakai bahasa yang sama.
+Bulk upload distinguishes accepted files, failed submissions and uncertain delivery. Once a record is saved, the card shows how many NIKs were routed to reviewers. A review case explains why it was flagged and which part of the print to compare. If a differing position is known, the UI identifies the digit from the left. Reviewers can still open the original diagnostic details.
 
 ## 0.4.1 · 2026-11-24
 
-Edisi dokumentasi untuk tim yang menerima repo. README sekarang langsung membuka demo dua KK. Panduan engineer mengikuti satu kasus dari bulk upload, koreksi NIK dan restart sampai uji ambang baca ulang. Kode aplikasi dan default routing sama dengan 0.4.0.
+Documentation update for the 0.4.0 application. The README opens the two-card demo. The engineering walkthrough covers upload, correction, restart and threshold replay.
 
 ## 0.4.0 · 2026-11-22
 
-Daftar berkas, form upload dan pemeriksaan NIK memakai bahasa Indonesia. Jumlah anggota di daftar diambil dari hasil yang sudah tersimpan. Di ponsel, tiap KK tampil sebagai kartu. Saat memeriksa NIK, petugas bisa melihat angka hasil ekstraksi dan potongan gambar di satu layar. Panduan latihan memakai nama tombol yang sama dengan UI.
+Introduced Indonesian labels for intake and NIK review in this release. The document list shows saved member counts and switches to cards on phones. The crop and extracted NIK are displayed together.
 
 ## 0.3.0 · 2026-11-21
 
-Latihan lokal memakai dua gambar. Tiap gambar mendapat job sendiri. Setelah mengoreksi satu NIK, kita bisa restart aplikasi, membuka nilai sebelum dan sesudah koreksi, lalu mencoba ambang baca ulang pada batch tadi. Default tetap 0,90.
-
-Latihan berjalan dengan Python standard library dan SQLite. Hasil pembacaan, sinyal OCR, dan acuan cetakan disimpan terpisah. Edisi portabel lengkap juga disertakan di paket privat untuk latihan offline.
+Added a two-image local batch with persistent review history, a restart check and a reread-threshold comparison. Readings, OCR signals and print references are separate. The default threshold is 0.90. The local exercise uses SQLite and the Python standard library. The private handover included the portable exercise for offline use.
 
 ## 0.2.0 · 2026-11-21
 
-Evaluasi sekarang mencakup semua field per KK. Laporan membedakan nilai yang terbaca, kolom kosong, field yang tidak ada di layout, dan field yang acuannya belum jelas. Contoh dua anggota menunjukkan kenapa satu field berbeda cukup membuat satu KK gagal cocok penuh.
+Added full-card evaluation. It reports readable values, blanks, fields absent from a layout, unknown references and cards that match in full. The synthetic two-member example shows how one difference affects the document score.
 
 ## 0.1.0 · 2026-11-21
 
-Rilis pertama untuk bulk upload dan pemeriksaan NIK.
-
-- Tiap gambar dalam batch mendapat satu job dan bukti penerimaan. Aplikasi menangani pengiriman ulang.
-- Worker membaca gambar, menjalankan OCR lokal bila diaktifkan, lalu meminta data keluarga dan anggota melalui adapter OCI Generative AI.
-- Setelah hasil tersimpan, router membaca ulang crop NIK yang meragukan. Kasus review terikat ke anggota. Setiap keputusan petugas punya revisi sendiri sehingga hasil AI awal masih bisa dibuka.
-- Untuk format cetak lama, router mencocokkan digit dengan crop. Digit yang hilang tetap perlu diperiksa. Validasi identitas untuk keperluan bisnis dilakukan terpisah.
-- Pada instalasi baru, operator mengisi compartment dan routing profile lewat environment serta menyiapkan ledger untuk baca ulang. Repo portabel memakai contoh sintetis. Profil geometri customer disimpan secara privat.
+Initial portable release for bulk intake and NIK review. Each image gets a job and receipt, with repeat-submission handling. The worker supports local OCR and an OCI Generative AI adapter. After commit, flagged NIK crops can be reread and reviewed per member, with the initial extraction retained. Legacy print comparisons preserve the printed digits. Operators supply their compartment, model routing profile and private geometry. The public examples use fictional data.

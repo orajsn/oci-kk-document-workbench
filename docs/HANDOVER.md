@@ -1,39 +1,37 @@
-# Serah terima ke tim FIF
+# Verify a Workbench deployment
 
-Mulai dari dua KK. Upload keduanya sekaligus, buka anggota yang perlu diperiksa, simpan satu keputusan, lalu buka lagi dari sesi baru. Di akhir tes, tim aplikasi dan DBA harus bisa menunjukkan hasil AI awal dan keputusan petugas untuk anggota yang sama.
+A handover is complete when an operator can open a saved household, find the right member, record a decision against the print and retrieve both the original reading and that decision. The [local exercise](DAY-ONE.md) covers the first steps with two fictional images. Use this guide to verify an installation in the receiving team's OCI tenancy.
 
-Untuk mencoba di laptop, ambil tag yang disepakati ke folder kosong dan ikuti [latihan bulk upload](DAY-ONE.md). Data fiktif sudah ada di repo. Langkah di bawah dipakai saat tim siap menguji di tenancy sendiri.
+## Before the test
 
-## Sebelum menguji di OCI
+| Owner | What to prepare |
+| --- | --- |
+| Process owner | Required fields for each form layout, accepted handling of legacy numbers and unreadable print, and two images approved for processing. Include one known ambiguous NIK to exercise review. |
+| OCI platform team | Approved region and model routing profile, private access, dynamic group and least-privilege policies. Confirm the model-processing destination with the data owner. |
+| Application team | Application and router versions, prompt and schema versions, OCR model hashes, private crop profiles, test results and the previous working build. |
+| DBA | Extraction and review tables, runtime grants, wallet, backup and restore procedure, and read access for acceptance queries. |
+| Operations | Health checks, queue monitoring, capacity, failed-job handling and a retention policy for images and diagnostics. |
 
-| Tim | Yang perlu disiapkan |
-|---|---|
-| Pemilik proses | Field yang dibutuhkan pada tiap layout, aturan untuk nomor cetak lama, contoh hasil yang dapat diterima, dan keputusan kalau cetakan ambigu. Pilih dua gambar yang boleh diproses. Untuk tes review, sertakan gambar dengan NIK yang memang meragukan. |
-| Platform OCI | Resource di region yang disepakati, routing profile dan tujuan inferensi yang disetujui, akses privat, wallet, dynamic group dan policy dengan hak minimum. |
-| Aplikasi | Tag dan paket aplikasi serta router, versi prompt dan schema, hash model OCR, profil crop privat, tes dan build untuk rollback. |
-| DBA | Skema hasil dan tabel review, grant untuk user runtime, wallet, backup/restore, dan akses operator. |
-| Operasi | Health check, pemantauan antrean dan kapasitas, cara menemukan job gagal atau tertunda, serta retensi gambar dan data diagnostik. |
+For a new tenancy, follow [installation and operations](OPERATIONS.md). Replace resource identifiers and wallets with the receiving team's values. Start with one approved synthetic upload and record its job ID, model version and source hash. For an existing deployment, check the active versions against the private release manifest. Use a new batch reference so that earlier demo records are easy to identify.
 
-Di tenancy baru, ikuti [runbook instalasi](OPERATIONS.md). Ganti konfigurasi, resource yang dipin, dan wallet sesuai tenancy tujuan. Tes dulu satu upload sintetis dan catat job ID, versi `MODEL` serta hash gambar. Verifikasi rute sebelum mengirim gambar asli.
+<a id="uji-bulk-dan-review-di-oci"></a>
 
-Di pilot Batam yang sudah terpasang, cocokkan versi aplikasi dan router dengan manifest paket privat. Gunakan scope uji yang disetujui dan Case ID baru agar batch mudah dibedakan dari hasil lama.
+## Verify a batch in OCI
 
-## Uji bulk dan review di OCI
-
-1. Buka UI lewat tunnel. Cek banner **OCI Batam** dan nama model. Pilih kedua gambar, klik **Unggah berkas**, lalu catat nama file, hash sumber, Case ID dan job ID. Tiap file harus punya satu job. Job ID juga terlihat di URL API saat membuka detail.
-2. Buka kedua hasil. Cocokkan data keluarga dan urutan anggota dari Oracle. Setelah panel **Pemeriksaan NIK selesai** muncul, cek berapa NIK yang ditandai, berapa yang lolos setelah baca ulang dan berapa yang masuk antrean petugas. Batch bisa selesai dengan nol kasus. Kalau itu terjadi, pakai job uji baru yang punya kasus terbuka untuk menguji penyimpanan keputusan.
-3. Pada job tersebut, klik **Periksa NIK berkas ini**. Cocokkan nomor baris, nama anggota, crop dan angka hasil AI. Pilih **Konfirmasi sesuai cetakan**, **Koreksi NIK** atau **Masih tidak terbaca** sesuai gambar. Catat job dan barisnya. Tutup browser, buka lagi lewat tunnel dari sesi baru, lalu pilih **Sudah diperiksa**. Keputusan terakhir harus muncul pada anggota yang sama.
-4. DBA bisa mengecek hasil sebelum dan sesudah petugas menyimpan keputusan. Dari root edisi portabel, gunakan koneksi baca ke schema yang diuji. Ganti `JOB_ID` dengan ID dari langkah pertama.
+1. Open the authorized operator interface. Check **OCI Batam** and the configured model. Upload both images in one action. Record each filename, source hash, case reference and job ID. There should be one job per image. The job detail API and JSON export expose the job ID.
+2. Open both saved results and compare household data, member count and row order against the originals. When NIK routing finishes, record the number flagged, cleared automatically and sent to a reviewer. Zero review cases is a valid outcome. To test a decision, use a fresh authorized job with an actual case.
+3. Choose **Review NIKs for this card**. Compare the member row, name, crop and original reading. Choose **Confirm as printed**, **Correct NIK** or **Still unreadable**. Record the job and row. Reopen **Reviewed** and verify the latest decision on that same member. The hosted participant demo scopes results to the current browser session. Use the private operator interface for cross-session database acceptance.
+4. In SQLcl, connect with read access and run the following from the portable repository root. Replace `JOB_ID` with the real identifier. Run it before and after the decision.
 
 ```sql
 @sql/check_nik_handover.sql JOB_ID
 ```
 
-Hasil query pertama memuat versi `MODEL` dan bukti bahwa router sudah memproses job. Kalau routing selesai, `FLAGGED = CLEARED + REVIEW_COUNT`. Kalau `FINISHED_AT` masih kosong, cek status job, timer dan router di runbook. Hasil query kedua memuat nomor baris, revisi dan tindakan. NIK tidak ditampilkan. Setelah keputusan pertama, cek bahwa baris itu mendapat revisi 1 dan versi `MODEL` asal tetap sama.
+The first query reports the original `MODEL` version and the routing receipt. Once `FINISHED_AT` is populated, `FLAGGED = CLEARED + REVIEW_COUNT`. If it is empty, check the job, router and timer. The second query reports the member row, revision and reviewer action without printing a NIK. After the first decision, look for revision 1 on the expected row and the same original model version.
 
-## Sebelum hasilnya diterima
+## Acceptance checks
 
-- Buka satu kasus dari dua tab pada revisi awal yang sama. Setelah tab pertama menyimpan, aplikasi harus menolak submit dari tab kedua yang masih memakai revisi lama.
-- Jalankan router sekali lagi untuk job yang sudah selesai. Cocokkan jumlah request dan kasus dengan catatan sebelumnya. Kalau hasil satu request belum diketahui, cek ledger sebelum mengambil tindakan.
-- Simpan tag aplikasi dan router, scope, sumber serta tujuan pemrosesan yang disetujui, kedua job ID, dan hasil cek sesi baru di lokasi internal. Catat tiga waktu terpisah, yaitu klik upload, commit Oracle terakhir dan routing terakhir.
-- Sebelum menambah beban, uji pada sampel terpisah dengan label independen. Gunakan pola kedatangan saat jam sibuk dan target p95 yang disepakati. Perubahan ambang baca ulang perlu hasil uji tersebut dan persetujuan rilis sendiri.
+- Open one case in two tabs at the same revision. After the first tab saves, the second tab's stale submission should be rejected.
+- Run the router again for the finished job. Reconcile calls and cases with the previous receipt. If a call has an unknown outcome, inspect the ledger before retrying.
+- Retain the application and router tags, scope, approved source and processing destination, both job IDs and the reopen result privately. Capture upload time, last database commit and final routing time separately.
+- Before increasing load, test a separately labeled holdout set against the expected peak arrivals and p95 target. A new reread threshold needs its own acceptance results and release decision.

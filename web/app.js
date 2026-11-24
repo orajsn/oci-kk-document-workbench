@@ -3,22 +3,22 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const fieldLabels = {
-    kk_number_raw: "Nomor KK", form_serial: "Nomor seri formulir", head_name: "Kepala keluarga",
-    address: "Alamat", rt: "RT", rw: "RW", village: "Desa atau kelurahan", district: "Kecamatan",
-    regency_city: "Kabupaten atau kota", province: "Provinsi", postal_code: "Kode pos", issued_date_raw: "Tanggal terbit",
-    row_number: "Baris", full_name: "Nama lengkap", nik_raw: "NIK", sex: "Jenis kelamin", birth_place: "Tempat lahir",
-    birth_date_raw: "Tanggal lahir", religion: "Agama", education: "Pendidikan", occupation: "Pekerjaan",
-    blood_group: "Golongan darah", marital_status: "Status perkawinan", marriage_date_raw: "Tanggal perkawinan",
-    relationship_to_head: "Hubungan dalam keluarga", nationality: "Kewarganegaraan", passport_number: "Nomor paspor",
-    residence_permit_number: "Izin tinggal", father_name: "Nama ayah", mother_name: "Nama ibu",
-    combined_parent_name: "Nama orang tua (format lama)"
+    kk_number_raw: "Family card number", form_serial: "Form serial number", head_name: "Head of household",
+    address: "Address", rt: "RT", rw: "RW", village: "Village or urban ward", district: "District",
+    regency_city: "Regency or city", province: "Province", postal_code: "Postal code", issued_date_raw: "Issue date",
+    row_number: "Row", full_name: "Full name", nik_raw: "NIK", sex: "Sex", birth_place: "Place of birth",
+    birth_date_raw: "Date of birth", religion: "Religion", education: "Education", occupation: "Occupation",
+    blood_group: "Blood group", marital_status: "Marital status", marriage_date_raw: "Marriage date",
+    relationship_to_head: "Family relationship", nationality: "Citizenship", passport_number: "Passport number",
+    residence_permit_number: "Residence permit", father_name: "Father’s name", mother_name: "Mother’s name",
+    combined_parent_name: "Parent’s name (legacy layout)"
   };
   const evidenceLabels = {
-    READABLE: "Terbaca", BLANK_ON_DOCUMENT: "Kosong pada KK", UNREADABLE: "Tidak terbaca",
-    CROPPED: "Terpotong", NOT_PRESENT_IN_LAYOUT: "Tidak ada di format ini", AMBIGUOUS: "Meragukan", NOT_REVIEWED: "Belum diperiksa"
+    READABLE: "Readable", BLANK_ON_DOCUMENT: "Blank on card", UNREADABLE: "Unreadable",
+    CROPPED: "Cropped", NOT_PRESENT_IN_LAYOUT: "Absent from this layout", AMBIGUOUS: "Ambiguous", NOT_REVIEWED: "Unreviewed"
   };
   const statusLabels = {
-    QUEUED: "Dalam antrean", PROCESSING: "Diproses", NEEDS_REVIEW: "Perlu diperiksa", ACCEPTED: "Sudah diperiksa", FAILED: "Proses terhenti"
+    QUEUED: "Queued", PROCESSING: "Processing", NEEDS_REVIEW: "Needs review", ACCEPTED: "Reviewed", FAILED: "Processing stopped"
   };
   const memberGroups = {
     identity: ["row_number", "full_name", "nik_raw", "sex", "birth_place", "birth_date_raw"],
@@ -50,16 +50,16 @@
     try {
       const response = await fetch(path, request);
       let data;
-      try { data = await response.json(); } catch { throw new ApiError("Respons layanan tidak terbaca. Muat ulang halaman.", response.status); }
+      try { data = await response.json(); } catch { throw new ApiError("Could not read the service response. Reload the page.", response.status); }
       if (!response.ok) {
-        const message = typeof data?.error?.message === "string" ? data.error.message : "Permintaan gagal. Coba lagi.";
+        const message = typeof data?.error?.message === "string" ? data.error.message : "Request failed. Try again.";
         throw new ApiError(message, response.status, data?.error?.code || "");
       }
       return data;
     } catch (error) {
       if (error instanceof ApiError) throw error;
-      if (error.name === "AbortError") throw new ApiError("Layanan belum merespons. Periksa koneksi dan coba lagi.");
-      throw new ApiError("Layanan tidak dapat dihubungi. Periksa koneksi dan coba lagi.");
+      if (error.name === "AbortError") throw new ApiError("The service has not responded. Check the connection and try again.");
+      throw new ApiError("Cannot reach the service. Check the connection and try again.");
     } finally { window.clearTimeout(timeout); }
   }
   function el(tag, className, value) {
@@ -74,25 +74,25 @@
   function shortDate(value) {
     const date = new Date(value);
     if (!value || Number.isNaN(date.getTime())) return "";
-    return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
+    return new Intl.DateTimeFormat("en-US", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
   }
   function badge(status) {
     const known = Object.hasOwn(statusLabels, status) ? status : "QUEUED";
-    return el("span", `status-badge status-${known.toLowerCase().replaceAll("_", "-")}`, statusLabels[status] || String(status || "Belum diketahui"));
+    return el("span", `status-badge status-${known.toLowerCase().replaceAll("_", "-")}`, statusLabels[status] || String(status || "Unknown"));
   }
   function setConnection(online) {
     state.lastConnection = online;
     const node = $("connection-status");
     node.className = `connection ${online ? "online" : "offline"}`;
-    const readyLabel = "Terhubung";
-    node.replaceChildren(el("span", "status-dot"), document.createTextNode(online ? readyLabel : "Koneksi terputus"));
-    node.setAttribute("aria-label", online ? readyLabel : "Koneksi terputus");
+    const readyLabel = "Connected";
+    node.replaceChildren(el("span", "status-dot"), document.createTextNode(online ? readyLabel : "Disconnected"));
+    node.setAttribute("aria-label", online ? readyLabel : "Disconnected");
   }
   function showGlobal(message, retry = false) {
     const node = $("global-message");
     node.replaceChildren(document.createTextNode(message));
     if (retry) {
-      const button = el("button", "button button-secondary", "Hubungkan kembali");
+      const button = el("button", "button button-secondary", "Reconnect");
       button.type = "button"; button.addEventListener("click", initialize); node.append(button);
     }
     node.hidden = false;
@@ -105,11 +105,11 @@
     state.dirty = true;
     visible("unsaved-label", true);
     visible("review-message", false);
-    $("panel-flags").querySelector(".checks-note").textContent = "Simpan perubahan untuk memperbarui temuan.";
+    $("panel-flags").querySelector(".checks-note").textContent = "Save your changes to refresh the issues.";
   }
   function resetDirty() { state.dirty = false; state.edited.clear(); visible("unsaved-label", false); }
   function requestNavigation(action) {
-    if (state.saving) { announce("Tunggu hingga pemeriksaan selesai disimpan."); return; }
+    if (state.saving) { announce("Wait for the review to finish saving."); return; }
     if (!state.dirty) { action(); return; }
     state.pendingNavigation = action;
     $("discard-dialog").showModal();
@@ -124,7 +124,7 @@
     if (match) {
       const index = Number(match[1]);
       const row = state.draft?.members?.[index]?.row_number ?? (index + 1);
-      return `Anggota baris ${row} · ${fieldLabels[match[2]] || match[2]}`;
+      return `Member row ${row} · ${fieldLabels[match[2]] || match[2]}`;
     }
     if (normalized.startsWith("household.")) return fieldLabels[normalized.slice(10)] || normalized.slice(10);
     return fieldLabels[normalized] || normalized || "Document";
@@ -151,23 +151,23 @@
     }
   }
   function modeLabel(mode) {
-    return {demo: "Contoh sintetis", reference: "Rekaman latihan", oci: state.currentModelLabel || "OCI Generative AI"}[mode] || String(mode || "Belum diketahui");
+    return {demo: "Synthetic example", reference: "Recorded sample", oci: state.currentModelLabel || "OCI Generative AI"}[mode] || String(mode || "Unknown");
   }
   function checks() {
     const all = [];
     for (const item of state.detail?.validation?.issues || []) {
-      if (typeof item === "string") all.push({ path: "", message: item, source: "Validasi" });
-      else all.push({ ...item, source: "Validasi" });
+      if (typeof item === "string") all.push({ path: "", message: item, source: "Validation" });
+      else all.push({ ...item, source: "Validation" });
     }
     for (const item of state.draft?.review_flags || []) {
       // Training mode is disclosed in the source label. It is not a field discrepancy.
       if ((state.detail.job.mode === "reference" && item.code === "REFERENCE_REPLAY") ||
           (state.detail.job.mode === "demo" && item.code === "SYNTHETIC_DEMO")) continue;
-      all.push({ ...item, source: "Pemeriksaan" });
+      all.push({ ...item, source: "Review" });
     }
     for (const item of state.draft?.field_evidence || []) {
       if (["UNREADABLE", "CROPPED", "AMBIGUOUS"].includes(item.status)) {
-        all.push({ path: item.path, code: item.status, message: item.note || evidenceLabels[item.status], source: "Bukti gambar" });
+        all.push({ path: item.path, code: item.status, message: item.note || evidenceLabels[item.status], source: "Image evidence" });
       }
     }
     const seen = new Set();
@@ -185,7 +185,7 @@
     if (field === "row_number") { input.min = "1"; input.max = "100"; input.step = "1"; input.required = true; input.classList.add("row-number-input"); }
     input.id = `field-${path.replaceAll(".", "-")}`;
     input.setAttribute("aria-label", humanPath(path));
-    input.placeholder = "Kosong";
+    input.placeholder = "Empty";
     if (field === "nik_raw" || field === "kk_number_raw" || field === "postal_code") input.inputMode = "text";
     const warnings = fieldWarnings(path);
     if (warnings.length) input.classList.add("flagged");
@@ -211,8 +211,8 @@
     const matching = state.draft.field_evidence.filter((item) => normalizePath(item.path) === normalizePath(path));
     const kind = evidence.status === "READABLE" ? " readable" : ["UNREADABLE", "CROPPED", "AMBIGUOUS", "NOT_REVIEWED"].includes(evidence.status) ? " warning" : "";
     const node = el("select", `evidence-label evidence-select${kind}`);
-    node.setAttribute("aria-label", `Keterbacaan ${humanPath(path)}`);
-    if (matching.length > 1) { const option = el("option", "", `Periksa ${matching.length} catatan`); option.value = ""; option.disabled = true; node.append(option); node.classList.add("warning"); }
+    node.setAttribute("aria-label", `Readability of ${humanPath(path)}`);
+    if (matching.length > 1) { const option = el("option", "", `Review ${matching.length} notes`); option.value = ""; option.disabled = true; node.append(option); node.classList.add("warning"); }
     for (const status of state.config.evidence_statuses || Object.keys(evidenceLabels)) {
       const option = el("option", "", evidenceLabels[status] || status); option.value = status; node.append(option);
     }
@@ -233,9 +233,9 @@
   function attachFieldNotes(container, path, input) {
     // The evidence control and section guidance already explain the generic review state.
     // Keep substantive validation failures and document evidence notes beside their fields.
-    const notes = fieldWarnings(path).filter(item => !(item.source === "Validasi" && item.code === "NOT_REVIEWED" && item.message === "Review this field against the source before acceptance."));
+    const notes = fieldWarnings(path).filter(item => !(item.source === "Validation" && item.code === "NOT_REVIEWED" && item.message === "Review this field against the source before acceptance."));
     if (!notes.length) return;
-    const note = el("span", "field-note", [...new Set(notes.map((item) => item.message || item.code || "Periksa isian ini"))].join(" · "));
+    const note = el("span", "field-note", [...new Set(notes.map((item) => item.message || item.code || "Check this field"))].join(" · "));
     note.id = `${input.id}-note`; input.setAttribute("aria-describedby", note.id); container.append(note);
   }
   function renderHousehold() {
@@ -277,11 +277,11 @@
     const container = $("checks-list"); container.replaceChildren();
     if (!items.length) {
       const item = el("div", "check-card clear");
-      item.append(el("strong", "", "Tidak ada temuan format"), el("p", "", "Cocokkan nilai dengan gambar sebelum menyelesaikan pemeriksaan.")); container.append(item); return;
+      item.append(el("strong", "", "No formatting issues"), el("p", "", "Compare the values with the image before completing the review.")); container.append(item); return;
     }
     for (const item of items) {
       const card = el("div", "check-card");
-      card.append(el("strong", "", humanPath(item.path)), el("p", "", item.message || item.note || item.code || "Perlu diperiksa"), el("p", "check-source", `${item.source}${item.code ? ` · ${item.code}` : ""}`));
+      card.append(el("strong", "", humanPath(item.path)), el("p", "", item.message || item.note || item.code || "Needs review"), el("p", "check-source", `${item.source}${item.code ? ` · ${item.code}` : ""}`));
       container.append(card);
     }
   }
@@ -290,7 +290,7 @@
     $("history-count").textContent = history.length ? `(${history.length})` : ""; visible("history-empty", !history.length);
     for (const entry of [...history].reverse()) {
       const item = el("li", "history-entry"); const top = el("div", "history-top");
-      top.append(badge(entry.decision || entry.status), el("span", "", `Versi ${entry.to_version ?? entry.version ?? entry.new_version ?? "—"} · ${shortDate(entry.created_at || entry.timestamp)}`));
+      top.append(badge(entry.decision || entry.status), el("span", "", `Version ${entry.to_version ?? entry.version ?? entry.new_version ?? "—"} · ${shortDate(entry.created_at || entry.timestamp)}`));
       item.append(top);
       if (entry.comment) item.append(el("p", "history-note", entry.comment));
       list.append(item);
@@ -306,9 +306,9 @@
     return needsDispatchCheck(job) ? "FAILED" : job.status;
   }
   function processingIssue(job) {
-    if (needsDispatchCheck(job)) return "Periksa pengiriman ke antrean sebelum mengirim ulang berkas.";
-    if (job.last_error === "PRIOR_OUTCOME_UNKNOWN") return "Proses berhenti sebelum hasil tersimpan. Periksa permintaan sebelumnya sebelum mencoba lagi.";
-    return typeof job.last_error === "string" ? job.last_error : job.last_error?.message || "Pemrosesan terhenti. Hubungi pengelola aplikasi.";
+    if (needsDispatchCheck(job)) return "Check whether the file reached the queue before submitting it again.";
+    if (job.last_error === "PRIOR_OUTCOME_UNKNOWN") return "Processing stopped before the result was saved. Check the previous request before retrying.";
+    return typeof job.last_error === "string" ? job.last_error : job.last_error?.message || "Processing stopped. Contact the application operator.";
   }
   function filteredJobs() {
     const query = $("job-search").value.toLocaleLowerCase().trim();
@@ -334,7 +334,7 @@
   }
   function updateDetailNavigation() {
     const index = state.detailOrder.indexOf(state.selectedId);
-    $("detail-position").textContent = index >= 0 ? `${index + 1} dari ${state.detailOrder.length} berkas` : "Berkas terpilih";
+    $("detail-position").textContent = index >= 0 ? `${index + 1} of ${state.detailOrder.length} documents` : "Selected document";
     $("previous-document").disabled = state.saving || index <= 0;
     $("next-document").disabled = state.saving || index < 0 || index >= state.detailOrder.length - 1;
     $("back-to-overview").disabled = state.saving;
@@ -344,7 +344,7 @@
       jump.replaceChildren();
       for (const id of state.detailOrder) {
         const job = state.jobs.find(item => item.id === id);
-        const option = el("option", "", job ? `${job.case_id || "Document"} · ${job.filename || "Image"}` : "Berkas terpilih");
+        const option = el("option", "", job ? `${job.case_id || "Document"} · ${job.filename || "Image"}` : "Selected document");
         option.value = id; jump.append(option);
       }
       jump.value = state.selectedId || "";
@@ -358,7 +358,7 @@
     document.body.classList.add("view-overview"); document.body.classList.remove("view-detail");
     visible("overview", true); visible("welcome", true); visible("detail-workspace", false);
     visible("detail", false); visible("detail-loading", false); visible("detail-error", false);
-    renderJobList(); document.title = "Kartu Keluarga · Ruang Dokumen";
+    renderJobList(); document.title = "Family Card Workbench";
     requestAnimationFrame(() => {
       const button = [...$("job-list").querySelectorAll("button[data-job-id]")].find(node => node.dataset.jobId === previousId);
       (button || $("overview-title")).focus({ preventScroll: true });
@@ -383,11 +383,11 @@
     const failed = jobs.filter(job => activityStatus(job) === "FAILED").length;
     const saved = jobs.filter(hasResult).length;
     visible("activity-panel", queued + running + failed > 0);
-    $("activity-summary").textContent = `${saved} dari ${jobs.length} hasil tersimpan · ${queued} antre · ${running} diproses`;
+    $("activity-summary").textContent = `${saved} of ${jobs.length} results saved · ${queued} queued · ${running} processing`;
     $("activity-progress").max = Math.max(1, jobs.length);
     $("activity-progress").value = saved;
     $("activity-failed").hidden = !failed;
-    $("activity-failed").textContent = `${failed} perlu ditindaklanjuti`;
+    $("activity-failed").textContent = `${failed} need attention`;
   }
   function renderJobList() {
     const jobs = filteredJobs();
@@ -402,11 +402,11 @@
     $("stat-reviewed-value").textContent = String(state.jobs.filter(job => job.status === "ACCEPTED").length);
     const batchOption = $("list-scope").querySelector('option[value="batch"]');
     batchOption.disabled = !state.latestBatchIds.length;
-    batchOption.textContent = state.latestBatchIds.length ? `Unggahan terakhir (${state.latestBatchIds.length})` : "Unggahan terakhir";
+    batchOption.textContent = state.latestBatchIds.length ? `Last upload (${state.latestBatchIds.length})` : "Last upload";
     const batchView = $("list-scope").value === "batch";
     const optionsActive = batchView || $("status-filter").value || $("job-sort").value !== "newest";
-    $("list-options").querySelector("summary").textContent = optionsActive ? "Filter dan urutan · aktif" : "Filter dan urutan";
-    $("list-scope-description").textContent = batchView ? `Unggahan ${state.latestBatchCase || "sesi ini"}.` : "Maksimal 500 berkas terbaru.";
+    $("list-options").querySelector("summary").textContent = optionsActive ? "Filter and sort · active" : "Filter and sort";
+    $("list-scope-description").textContent = batchView ? `Upload ${state.latestBatchCase || "this session"}.` : "Showing up to 500 recent documents.";
     for (const button of document.querySelectorAll("[data-stat-filter]")) {
       const active = !batchView && !$("job-search").value.trim() && button.dataset.statFilter === $("status-filter").value;
       button.classList.toggle("is-active", active); button.setAttribute("aria-pressed", String(active));
@@ -418,29 +418,29 @@
       const documentCell = el("td", "document-cell"), documentWrap = el("div", "document-cell-content");
       const icon = el("span", "document-file-icon", "KK"); icon.setAttribute("aria-hidden", "true");
       const documentText = el("div", "document-file-text");
-      const caseName = el("strong", "document-case", job.case_id || "Tanpa referensi"), filename = el("span", "document-filename", job.filename || "Tanpa nama file");
+      const caseName = el("strong", "document-case", job.case_id || "No reference"), filename = el("span", "document-filename", job.filename || "Unnamed file");
       filename.title = job.filename || ""; documentText.append(caseName, filename); documentWrap.append(icon, documentText); documentCell.append(documentWrap);
       const processing = el("td", "document-processing");
       const processKind = activityStatus(job) === "FAILED" ? "failed" : job.status === "PROCESSING" ? "processing" : job.status === "QUEUED" ? "queued" : hasResult(job) ? "complete" : "pending";
-      const processLabel = needsDispatchCheck(job) ? "Periksa pengiriman" : { failed: "Terhenti", processing: "Diproses", queued: "Dalam antrean", complete: "Selesai", pending: "Menunggu hasil" }[processKind];
+      const processLabel = needsDispatchCheck(job) ? "Check delivery" : { failed: "Stopped", processing: "Processing", queued: "Queued", complete: "Complete", pending: "Awaiting result" }[processKind];
       processing.append(el("span", `process-badge process-${processKind}`, processLabel));
       const members = el("td", "document-members", Number.isInteger(job.member_count) && job.member_count >= 0 ? job.member_count : "—");
-      if (!Number.isInteger(job.member_count)) members.title = hasResult(job) ? "Buka berkas untuk melihat data anggota." : "Tersedia setelah ekstraksi.";
+      if (!Number.isInteger(job.member_count)) members.title = hasResult(job) ? "Open the card to see its members." : "Available after extraction.";
       const review = el("td", "document-review");
-      review.append(hasResult(job) ? badge(job.status === "ACCEPTED" ? "ACCEPTED" : "NEEDS_REVIEW") : el("span", "cell-pending", "Menunggu hasil"));
+      review.append(hasResult(job) ? badge(job.status === "ACCEPTED" ? "ACCEPTED" : "NEEDS_REVIEW") : el("span", "cell-pending", "Awaiting result"));
       const updated = el("td", "document-updated", shortDate(job.updated_at || job.created_at) || "—");
-      const action = el("td", "document-open"), button = el("button", "button button-secondary open-document", hasResult(job) ? "Buka hasil" : "Lihat status");
-      button.type = "button"; button.dataset.jobId = job.id; button.setAttribute("aria-label", `Buka ${job.case_id || "document"}, ${job.filename || "image"}`);
+      const action = el("td", "document-open"), button = el("button", "button button-secondary open-document", hasResult(job) ? "Open result" : "View status");
+      button.type = "button"; button.dataset.jobId = job.id; button.setAttribute("aria-label", `Open ${job.case_id || "document"}, ${job.filename || "image"}`);
       button.addEventListener("click", () => requestNavigation(() => openDocument(job.id))); action.append(button);
       row.append(documentCell, processing, members, review, updated, action); list.append(row);
       if (focusedId === job.id) button.focus({ preventScroll: true });
     }
     const filtered = !!$("job-search").value.trim() || !!$("status-filter").value || batchView;
     visible("queue-empty", !jobs.length && !state.loadingJobs && $("queue-error").hidden); visible("documents-table-wrap", !!jobs.length);
-    $("queue-empty-title").textContent = filtered ? "Berkas tidak ditemukan" : "Belum ada berkas";
-    $("queue-empty-copy").textContent = filtered ? "Ubah pencarian atau hapus filter untuk melihat berkas lain." : "Unggah foto atau hasil pindai KK untuk mulai.";
+    $("queue-empty-title").textContent = filtered ? "No matching documents" : "No documents yet";
+    $("queue-empty-copy").textContent = filtered ? "Change the search or clear the filters to see other documents." : "Upload a photo or scan of a family card to begin.";
     visible("welcome-upload", !filtered); visible("clear-filters", filtered);
-    $("page-summary").textContent = jobs.length ? `${start + 1}–${Math.min(start + pageSize, jobs.length)} dari ${jobs.length} berkas` : `0 berkas`;
+    $("page-summary").textContent = jobs.length ? `${start + 1}–${Math.min(start + pageSize, jobs.length)} of ${jobs.length} documents` : `0 documents`;
     $("previous-page").disabled = state.page <= 1; $("next-page").disabled = state.page >= pages;
     updateDetailNavigation();
   }
@@ -452,7 +452,7 @@
     const requestRevision = state.jobsRevision;
     try {
       const data = await api("/api/jobs");
-      if (!Array.isArray(data.jobs)) throw new ApiError("Daftar tidak dapat dibaca. Muat ulang halaman.");
+      if (!Array.isArray(data.jobs)) throw new ApiError("Could not read the document list. Reload the page.");
       if (state.jobsRevision !== requestRevision) { visible("queue-error", false); setConnection(true); return; }
       const signature = JSON.stringify(data.jobs);
       state.jobs = data.jobs;
@@ -486,63 +486,63 @@
         panel.hidden = false;
         if (info.stage === "complete") {
           text.textContent = info.review > 0
-            ? info.review + " NIK masuk antrean petugas. Buka kasus untuk mencocokkan angka dengan cetakan."
-            : "Pemeriksaan NIK selesai. Tidak ada NIK yang masuk antrean petugas.";
-          text.textContent += " Dari " + info.members + " anggota, " + info.flagged + " NIK ditandai untuk dicek lagi. " + info.cleared + " lolos pemeriksaan otomatis.";
+            ? info.review + (info.review === 1 ? " NIK needs review." : " NIKs need review.") + " Open a case to compare the digits with the print."
+            : "NIK checks are complete. No NIKs went to the review queue.";
+          text.textContent += " Members: " + info.members + " · Flagged: " + info.flagged + " · Cleared automatically: " + info.cleared + ".";
         } else {
-          text.textContent = {previous:"Kasus NIK dari review sebelumnya.",extracting:"Pemeriksaan NIK menunggu hasil ekstraksi.",checking:"Data KK sudah tersimpan. Sistem sedang memeriksa NIK tiap anggota.",failed:"Ekstraksi gagal; belum ada hasil untuk diperiksa."}[info.stage];
+          text.textContent = {previous:"NIK cases from an earlier review.",extracting:"NIK checks are waiting for the extraction.",checking:"The card has been saved. The system is checking each member’s NIK.",failed:"Extraction failed. No result is available for review."}[info.stage];
         }
         if (info.review > 0) { link.href = "/nik-review?job=" + encodeURIComponent(id); link.hidden = false; }
         if (info.stage === "extracting" || info.stage === "checking") nikStatusTimer = setTimeout(poll,10000);
       } catch (_) {
         if (state.selectedId !== id || epoch !== nikStatusEpoch) return;
-        panel.hidden = false; text.textContent = "Status pemeriksaan NIK belum tersedia.";
+        panel.hidden = false; text.textContent = "NIK check status is unavailable.";
         nikStatusTimer = setTimeout(poll,15000);
       }
     };
     poll();
   }
   function renderDetail(data) {
-    if (!data.job) throw new ApiError("Detail berkas belum lengkap. Muat ulang untuk mencoba lagi.");
+    if (!data.job) throw new ApiError("Incomplete document details. Reload the page.");
     const job = { ...data.job, result_available: !!data.extraction, member_count: Array.isArray(data.extraction?.members) ? data.extraction.members.length : null }; state.detail = data; state.draft = data.extraction ? clone(data.extraction) : null;
     state.conflict = false; resetDirty();
     visible("welcome", false); visible("detail-loading", false); visible("detail-error", false); visible("detail", true); visible("conflict-panel", false); visible("review-message", false);
     refreshNikRoute(job.id);
     $("detail-case").textContent = job.case_id; $("detail-filename").textContent = job.filename;
-    $("detail-status").replaceChildren(needsDispatchCheck(job) ? el("span", "status-badge status-failed", "Periksa pengiriman") : badge(job.status)); $("detail-version").textContent = `Versi ${job.version}`;
-    $("detail-time").textContent = `Diunggah ${shortDate(job.created_at)}`;
-    const source = job.mode === "reference" ? "Rekaman latihan" : job.mode === "demo" ? "Contoh sintetis" : job.mode === "oci" ? "OCI Generative AI" : modeLabel(job.mode);
-    $("mode-notice").textContent = "Sumber pembacaan · " + source;
+    $("detail-status").replaceChildren(needsDispatchCheck(job) ? el("span", "status-badge status-failed", "Check delivery") : badge(job.status)); $("detail-version").textContent = `Version ${job.version}`;
+    $("detail-time").textContent = `Uploaded ${shortDate(job.created_at)}`;
+    const source = job.mode === "reference" ? "Recorded sample" : job.mode === "demo" ? "Synthetic example" : job.mode === "oci" ? "OCI Generative AI" : modeLabel(job.mode);
+    $("mode-notice").textContent = "Reading source · " + source;
     const active = ["QUEUED", "PROCESSING"].includes(activityStatus(job)); const failed = activityStatus(job) === "FAILED";
     visible("job-progress", active); visible("job-failure", failed);
-    if (active) $("job-progress").replaceChildren(el("span", "spinner"), document.createTextNode(job.status === "QUEUED" ? "Berkas menunggu giliran." : job.mode === "oci" ? "Model sedang membaca gambar." : "Menyiapkan hasil latihan."));
+    if (active) $("job-progress").replaceChildren(el("span", "spinner"), document.createTextNode(job.status === "QUEUED" ? "This document is in the queue." : job.mode === "oci" ? "The model is reading the image." : "Preparing the practice result."));
     if (failed) {
       $("job-failure-copy").textContent = processingIssue(job);
       const exhausted = Number(job.attempts) >= Number(job.max_attempts);
-      $("retry-job").disabled = exhausted; $("retry-job").textContent = exhausted ? "Batas percobaan tercapai" : "Coba proses lagi";
+      $("retry-job").disabled = exhausted; $("retry-job").textContent = exhausted ? "Attempt limit reached" : "Retry processing";
       visible("retry-job", state.config?.capabilities?.manual_retry !== false);
     }
     visible("extraction-area", !!state.draft); visible("no-extraction", !state.draft);
     if (!state.draft) {
-      $("no-extraction").querySelector("h3").textContent = failed ? "Hasil belum tersedia" : "Menunggu hasil pembacaan";
-      $("no-extraction").querySelector("p").textContent = failed ? state.config?.capabilities?.manual_retry === false ? "Hubungi pengelola untuk melanjutkan pemrosesan. Gambar asli masih tersedia." : "Periksa kendala lalu coba proses lagi. Gambar asli masih tersedia." : "Hasil muncul setelah berkas selesai diproses.";
+      $("no-extraction").querySelector("h3").textContent = failed ? "Result unavailable" : "Waiting for results";
+      $("no-extraction").querySelector("p").textContent = failed ? state.config?.capabilities?.manual_retry === false ? "Ask the operator to resume processing. The original image is still available." : "Check the issue and retry processing. The original image is still available." : "Results appear when processing finishes.";
     } else {
       prepareEvidence();
       $("layout-family").value = state.draft.layout_family || "unknown";
       $("member-count").textContent = String(state.draft.members?.length || 0);
       renderHousehold(); renderMembers(); renderChecks();
-      $("panel-flags").querySelector(".checks-note").textContent = "Temuan mencakup format data dan keterbacaan pada gambar.";
+      $("panel-flags").querySelector(".checks-note").textContent = "Issues include formatting and image readability.";
       $("review-comment").value = ""; $("review-decision").value = "NEEDS_REVIEW";
-      $("save-review").disabled = false; $("save-review").textContent = "Simpan pemeriksaan";
+      $("save-review").disabled = false; $("save-review").textContent = "Save review";
       setTab(state.tab);
     }
     renderHistory(); updateListJob(job); updateDetailNavigation();
     $("detail").querySelector(".review-workspace").classList.toggle("data-wide", state.dataWide);
     if (state.imageJobId !== job.id) loadImage(job.id);
-    document.title = `${job.case_id} · Ruang Dokumen`;
+    document.title = `${job.case_id} · Document Workbench`;
   }
   async function loadDetail(id, options = {}) {
-    if (!state.config) { showGlobal("Hubungkan kembali layanan sebelum membuka berkas.", true); return; }
+    if (!state.config) { showGlobal("Reconnect before opening a document.", true); return; }
     if (state.view === "overview") state.overviewScroll = window.scrollY;
     state.view = "detail"; document.body.classList.remove("view-overview"); document.body.classList.add("view-detail");
     visible("overview", false); visible("detail-workspace", true);
@@ -607,21 +607,21 @@
     if (state.saving || state.conflict || !state.draft || !state.detail) return;
     for (const input of $("extraction-area").querySelectorAll("input")) { if (!input.reportValidity()) return; }
     state.saving = true; const jobId = state.selectedId; updateDetailNavigation();
-    $("save-review").disabled = true; $("save-review").textContent = "Menyimpan…"; visible("review-message", false);
+    $("save-review").disabled = true; $("save-review").textContent = "Saving…"; visible("review-message", false);
     const controls = $("extraction-area").querySelectorAll("input, select, textarea"); for (const control of controls) control.disabled = true;
     try {
       const data = await api(`/api/jobs/${encodeURIComponent(jobId)}/review`, { method: "POST", body: {
         expected_version: state.detail.job.version, decision: $("review-decision").value, extraction: state.draft, comment: $("review-comment").value
       } });
       if (state.selectedId !== jobId) return;
-      state.saving = false; renderDetail(data); showReviewMessage(`Pemeriksaan tersimpan sebagai versi ${data.job.version}. ${statusLabels[data.job.status] || data.job.status}.`); announce("Pemeriksaan tersimpan.");
+      state.saving = false; renderDetail(data); showReviewMessage(`Review saved as version ${data.job.version}. ${statusLabels[data.job.status] || data.job.status}.`); announce("Review saved.");
     } catch (error) {
       if (state.selectedId !== jobId) return;
-      if (error.status === 409) { state.conflict = true; visible("conflict-panel", true); $("conflict-panel").scrollIntoView({ behavior: "smooth", block: "nearest" }); announce("Versi baru tersedia. Perubahan Anda masih ada di layar."); }
-      else showReviewMessage(error.code === "REVIEW_BLOCKED" ? `${error.message} Simpan sebagai Perlu diperiksa lalu cek temuan.` : error.message, true);
+      if (error.status === 409) { state.conflict = true; visible("conflict-panel", true); $("conflict-panel").scrollIntoView({ behavior: "smooth", block: "nearest" }); announce("A newer version is available. Your edits are still on screen."); }
+      else showReviewMessage(error.code === "REVIEW_BLOCKED" ? `${error.message} Save as Needs review and check the issues.` : error.message, true);
     } finally {
       state.saving = false; updateDetailNavigation();
-      if (state.selectedId === jobId) { for (const control of controls) control.disabled = false; $("save-review").disabled = state.conflict; $("save-review").textContent = "Simpan pemeriksaan"; }
+      if (state.selectedId === jobId) { for (const control of controls) control.disabled = false; $("save-review").disabled = state.conflict; $("save-review").textContent = "Save review"; }
     }
   }
   async function retryJob() {
@@ -629,7 +629,7 @@
     const id = state.selectedId; $("retry-job").disabled = true;
     try {
       const data = await api(`/api/jobs/${encodeURIComponent(id)}/retry`, { method: "POST" });
-      if (id === state.selectedId) renderDetail(data); updateListJob(data.job); announce("Permintaan dikirim.");
+      if (id === state.selectedId) renderDetail(data); updateListJob(data.job); announce("Request sent.");
     } catch (error) { if (id === state.selectedId) { $("job-failure-copy").textContent = error.message; $("retry-job").disabled = false; } }
   }
   function randomKey() {
@@ -644,14 +644,14 @@
   function modeDescription() {
     const mode = $("processing-mode").value;
     const help = {
-      demo: "Menampilkan contoh sintetis yang sama untuk setiap gambar.",
-      reference: "Menampilkan hasil latihan yang tersimpan untuk gambar ini. Tanpa panggilan AI.",
-      oci: "Gambar yang disetujui akan dikirim untuk dibaca oleh model."
+      demo: "Shows the same synthetic example for each image.",
+      reference: "Replays the saved sample for this image without calling AI.",
+      oci: "The approved image will be sent to the model for extraction."
     };
     $("mode-description").textContent = help[mode] || "";
     visible("upload-boundary", mode === "oci");
-    $("upload-boundary-title").textContent = "Lokasi pemrosesan";
-    $("upload-boundary-copy").textContent = state.cloudDisclosure || "Gambar yang disetujui dikirim ke OCI.";
+    $("upload-boundary-title").textContent = "Processing location";
+    $("upload-boundary-copy").textContent = state.cloudDisclosure || "Approved images are sent to OCI.";
   }
   let selectedImageUrl = null;
   const batchMaxFiles = 50, batchMaxBytes = 100 * 1024 * 1024;
@@ -661,23 +661,23 @@
     return prefix && (state.batch.length === 1 ? prefix : `${prefix}-${String(row.number).padStart(3, "0")}`);
   }
   function fileProblem(file) {
-    if (!file.size) return "File kosong.";
-    if (file.size > state.config.max_upload_bytes) return `Ukuran file melebihi ${Math.floor(state.config.max_upload_bytes / 1048576)} MB.`;
-    if ((file.type && !state.config.accepted_mime_types.includes(file.type)) || (!file.type && !/\.(jpe?g|png)$/i.test(file.name))) return "Pilih gambar JPG atau PNG.";
-    if (file.name.length > 255) return "Nama file melebihi 255 karakter.";
+    if (!file.size) return "The file is empty.";
+    if (file.size > state.config.max_upload_bytes) return `File size exceeds ${Math.floor(state.config.max_upload_bytes / 1048576)} MB.`;
+    if ((file.type && !state.config.accepted_mime_types.includes(file.type)) || (!file.type && !/\.(jpe?g|png)$/i.test(file.name))) return "Choose a JPG or PNG image.";
+    if (file.name.length > 255) return "The filename exceeds 255 characters.";
     return "";
   }
   function renderBatch() {
     const list = $("batch-list"); list.replaceChildren();
     const total = state.batch.reduce((sum, row) => sum + row.file.size, 0);
-    $("batch-count").textContent = state.batch.length ? `${state.batch.length} file · ${(total / 1048576).toFixed(2)} MB` : "Belum ada file dipilih";
+    $("batch-count").textContent = state.batch.length ? `${state.batch.length} files · ${(total / 1048576).toFixed(2)} MB` : "No files selected";
     const done = state.batch.filter(row => row.jobId).length;
     $("upload-progress-bar").max = Math.max(1, state.batch.length);
     $("upload-progress-bar").value = done;
     visible("upload-progress-bar", state.batchStarted && state.batch.length > 0);
     const uncertain = state.batch.filter(row => row.status === "uncertain").length;
     const rejected = state.batch.filter(row => row.status === "rejected").length;
-    $("batch-progress").textContent = state.batchStarted ? `${done} berkas diterima${uncertain ? ` · ${uncertain} belum pasti terkirim` : ""}${rejected ? ` · ${rejected} gagal dikirim` : ""}.` : "";
+    $("batch-progress").textContent = state.batchStarted ? `${done} files received${uncertain ? ` · ${uncertain} delivery unconfirmed` : ""}${rejected ? ` · ${rejected} failed to send` : ""}.` : "";
     visible("view-uploaded-documents", done > 0); $("view-uploaded-documents").disabled = state.uploading;
     $("clear-batch").hidden = !state.batch.length || state.uploading;
     $("check-image").disabled = state.uploading || state.imageChecking;
@@ -686,18 +686,18 @@
     $("upload-file").disabled = state.uploading || state.batchStarted;
     $("file-drop").classList.toggle("drop-disabled", state.uploading || state.batchStarted);
     $("submit-upload").disabled = state.uploading || !state.batch.some(row => row.status === "ready");
-    $("submit-upload").textContent = state.uploading ? "Mengunggah…" : "Unggah berkas";
+    $("submit-upload").textContent = state.uploading ? "Uploading…" : "Upload files";
     for (const row of state.batch) {
       const li = el("li", "batch-item");
       const thumb = el("img", "batch-thumb"); thumb.src = row.url; thumb.alt = "";
-      const info = el("div", "batch-info"); info.append(el("strong", "batch-name", row.file.name), el("span", "batch-meta", `${fileSize(row.file)} · ${row.caseId || batchCase(row) || "Isi nomor referensi"}`));
-      let label = row.message || ({ready:"Siap diunggah", uploading:"Mengunggah…", submitted:"Berkas diterima", uncertain:"Status unggahan belum pasti. Periksa sebelum mengirim ulang.", rejected:"Belum terkirim"}[row.status] || row.status);
-      if (row.jobId) { const job = state.jobs.find(item => item.id === row.jobId); label = `Tersimpan · ${job ? (hasResult(job) ? "Hasil tersimpan" : (needsDispatchCheck(job) ? "Periksa pengiriman" : statusLabels[job.status] || job.status)) : "Menunggu status"}`; }
+      const info = el("div", "batch-info"); info.append(el("strong", "batch-name", row.file.name), el("span", "batch-meta", `${fileSize(row.file)} · ${row.caseId || batchCase(row) || "Enter a batch reference"}`));
+      let label = row.message || ({ready:"Ready to upload", uploading:"Uploading…", submitted:"File received", uncertain:"Delivery is unconfirmed. Check its status before resubmitting.", rejected:"Not sent"}[row.status] || row.status);
+      if (row.jobId) { const job = state.jobs.find(item => item.id === row.jobId); label = `Received · ${job ? (hasResult(job) ? "Result saved" : (needsDispatchCheck(job) ? "Check delivery" : statusLabels[job.status] || job.status)) : "Awaiting status"}`; }
       info.append(el("span", `batch-status ${["invalid", "rejected", "uncertain"].includes(row.status) ? "batch-warning" : ""}`, label));
       const actions = el("div", "batch-actions");
-      if (!state.uploading && row.status === "uncertain") { const check = el("button", "text-button", "Periksa status"); check.type = "button"; check.addEventListener("click", () => checkBatchStatus(row)); actions.append(check); }
-      if (!state.uploading && row.jobId) { const view = el("button", "text-button", "Buka berkas"); view.type = "button"; view.addEventListener("click", () => { closeUpload(); requestNavigation(() => openDocument(row.jobId)); }); actions.append(view); }
-      if (!state.uploading && !state.batchStarted) { const remove = el("button", "icon-button batch-remove", "×"); remove.type = "button"; remove.setAttribute("aria-label", `Hapus ${row.file.name}`); remove.addEventListener("click", () => { URL.revokeObjectURL(row.url); state.batch = state.batch.filter(item => item !== row); renderBatch(); fileChanged(); }); actions.append(remove); }
+      if (!state.uploading && row.status === "uncertain") { const check = el("button", "text-button", "Check status"); check.type = "button"; check.addEventListener("click", () => checkBatchStatus(row)); actions.append(check); }
+      if (!state.uploading && row.jobId) { const view = el("button", "text-button", "Open document"); view.type = "button"; view.addEventListener("click", () => { closeUpload(); requestNavigation(() => openDocument(row.jobId)); }); actions.append(view); }
+      if (!state.uploading && !state.batchStarted) { const remove = el("button", "icon-button batch-remove", "×"); remove.type = "button"; remove.setAttribute("aria-label", `Remove ${row.file.name}`); remove.addEventListener("click", () => { URL.revokeObjectURL(row.url); state.batch = state.batch.filter(item => item !== row); renderBatch(); fileChanged(); }); actions.append(remove); }
       li.append(thumb, info, actions); list.append(li);
     }
   }
@@ -710,7 +710,7 @@
       const problem = fileProblem(file);
       state.batch.push({ file, number: ++state.batchSequence, key: randomKey(), url: URL.createObjectURL(file), status: problem ? "invalid" : "ready", message: problem, jobId: null, caseId: null });
     }
-    $("upload-error").textContent = [rejected ? `${rejected} file melebihi batas 50 file.` : "", sizeRejected ? `${sizeRejected} file melebihi total 100 MB.` : ""].filter(Boolean).join(" ");
+    $("upload-error").textContent = [rejected ? `${rejected} files exceed the 50-file limit.` : "", sizeRejected ? `${sizeRejected} files exceed the 100 MB batch limit.` : ""].filter(Boolean).join(" ");
     visible("upload-error", !!(rejected || sizeRejected));
     $("upload-file").value = ""; renderBatch(); fileChanged();
   }
@@ -721,24 +721,24 @@
     const enabled = state.config?.capabilities?.upload_image_check === true;
     visible("preparation-preview", enabled && !!row && row.status !== "invalid");
     $("selected-original").removeAttribute("src"); $("selected-dimensions").textContent = "";
-    $("preparation-status").textContent = "Periksa apakah tepi KK terlihat.";
+    $("preparation-status").textContent = "Check whether all edges of the card are visible.";
     if (enabled && row && row.status !== "invalid") { selectedImageUrl = URL.createObjectURL(row.file); $("selected-original").src = selectedImageUrl; }
   }
   async function checkImage() {
     const row = state.batch.length === 1 ? state.batch[0] : null; const file = row?.file;
     if (!file || state.uploading || state.imageChecking || !state.config?.capabilities?.upload_image_check || row.status === "invalid") return;
-    state.imageChecking = true; $("check-image").disabled = true; $("preparation-status").textContent = "Memeriksa gambar…";
+    state.imageChecking = true; $("check-image").disabled = true; $("preparation-status").textContent = "Checking image…";
     try {
       const content = await readFileBase64(file);
       const result = await api("/api/image-check", {method: "POST", body: {content_base64: content}});
       if (state.batch.length !== 1 || state.batch[0] !== row) return;
-      const boundary = result.document_boundary_available ? "Tepi dokumen terdeteksi." : "Tepi dokumen belum terdeteksi.";
-      $("preparation-status").textContent = [boundary, ...result.review_reasons, "Periksa tepi KK pada gambar asli."].join(" ");
+      const boundary = result.document_boundary_available ? "Document edges detected." : "Document edges could not be detected.";
+      $("preparation-status").textContent = [boundary, ...result.review_reasons, "Check the edges of the original image."].join(" ");
     } catch (error) { if (state.batch.length === 1 && state.batch[0] === row) $("preparation-status").textContent = error.message; }
     finally { state.imageChecking = false; $("check-image").disabled = state.uploading; }
   }
   async function checkBatchStatus(row) {
-    row.message = "Memeriksa daftar berkas…"; renderBatch();
+    row.message = "Checking the document list…"; renderBatch();
     try {
       if (state.config.runtime === "private_cloud") {
         const result = await api("/api/submission-status", {method: "POST", body: {case_id: row.caseId, idempotency_key: row.key}});
@@ -748,24 +748,24 @@
           if (!state.latestBatchIds.includes(row.jobId)) state.latestBatchIds.push(row.jobId);
           await loadJobs(true);
         } else {
-          row.message = "Unggahan belum tercatat. Periksa kembali setelah pengiriman selesai.";
+          row.message = "Upload has not been recorded yet. Check again after submission completes.";
         }
         renderBatch();
         return;
       }
       const data = await api(`/api/jobs?query=${encodeURIComponent(row.caseId)}`);
-      if (!Array.isArray(data.jobs)) throw new Error("Daftar berkas tidak dapat dibaca.");
+      if (!Array.isArray(data.jobs)) throw new Error("Could not read the document list.");
       const matches = data.jobs.filter(job => job.case_id === row.caseId && job.filename === row.file.name && job.mode === row.mode);
-      row.message = matches.length ? `${matches.length} berkas dengan referensi dan nama file yang sama. Periksa daftar sebelum mengunggah ulang.` : "Belum ada berkas yang cocok. Periksa status lagi sebelum mengulang unggahan.";
+      row.message = matches.length ? `${matches.length} files have this reference and filename. Check the list before uploading again.` : "No matching file yet. Check the status before resubmitting.";
       await loadJobs(true);
-    } catch { row.message = "Status unggahan belum dapat diperiksa."; }
+    } catch { row.message = "Upload status is unavailable."; }
     renderBatch();
   }
   function readFileBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result).split(",", 2)[1]);
-      reader.onerror = () => reject(new ApiError("File tidak dapat dibaca. Pilih kembali gambar JPG atau PNG."));
+      reader.onerror = () => reject(new ApiError("Could not read the file. Choose the JPG or PNG again."));
       reader.readAsDataURL(file);
     });
   }
@@ -774,10 +774,10 @@
     const mode = $("processing-mode").value, caseId = $("case-id").value.trim();
     const showError = message => { $("upload-error").textContent = message; visible("upload-error", true); };
     visible("upload-error", false);
-    if (!state.batch.some(row => row.status === "ready")) { showError("Pilih minimal satu gambar JPG atau PNG."); return; }
-    if (!state.config.modes.some(item => item.id === mode && item.available)) { showError("Pilih cara membaca yang tersedia."); return; }
-    if (!caseId || state.batch.some(row => batchCase(row).length > 128)) { showError("Persingkat nomor referensi agar cukup untuk nomor urut file (maks. 128 karakter)."); return; }
-    if (state.config.runtime === "private_cloud" && !/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/.test(caseId)) { showError("Awali referensi dengan huruf atau angka. Gunakan huruf, angka, garis bawah, titik, titik dua, atau tanda hubung."); return; }
+    if (!state.batch.some(row => row.status === "ready")) { showError("Choose at least one JPG or PNG image."); return; }
+    if (!state.config.modes.some(item => item.id === mode && item.available)) { showError("Select an available reading mode."); return; }
+    if (!caseId || state.batch.some(row => batchCase(row).length > 128)) { showError("Shorten the reference to leave room for the file sequence (128 characters total)."); return; }
+    if (state.config.runtime === "private_cloud" && !/^[A-Za-z0-9][A-Za-z0-9_.:-]*$/.test(caseId)) { showError("Start the reference with a letter or digit. Use letters, digits, underscores, periods, colons or hyphens."); return; }
     if (!state.batchStarted) { state.latestBatchIds = []; state.latestBatchCase = caseId; }
     state.batchStarted = true; state.uploading = true;
     for (const row of state.batch) { row.caseId = batchCase(row); row.mode = mode; }
@@ -789,52 +789,43 @@
       catch (error) { row.status = "rejected"; row.message = error.message; renderBatch(); continue; }
       try {
         const data = await api("/api/jobs", { method: "POST", body: {filename: row.file.name, content_base64: content, case_id: row.caseId, idempotency_key: row.key, mode} });
-        if (!data.job?.id) throw new ApiError("Layanan belum mengembalikan nomor berkas.");
+        if (!data.job?.id) throw new ApiError("The service has not returned a job ID.");
         row.jobId = data.job.id; row.status = "submitted"; row.message = "";
         if (!state.latestBatchIds.includes(row.jobId)) state.latestBatchIds.push(row.jobId); updateListJob(data.job);
       } catch (error) {
         const definitive = error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 409 && error.status !== 429;
         row.status = definitive ? "rejected" : "uncertain";
-        row.message = definitive ? `Belum terkirim · ${error.message}` : "Status unggahan belum pasti. Periksa sebelum mengirim ulang.";
+        row.message = definitive ? `Not sent · ${error.message}` : "Delivery is unconfirmed. Check its status before resubmitting.";
       }
       content = null; renderBatch();
     }
     state.uploading = false; $("close-upload").disabled = false; $("cancel-upload").disabled = false;
-    renderBatch(); await loadJobs(true); announce($("batch-progress").textContent + " Buka daftar berkas untuk melihat status pembacaan.");
+    renderBatch(); await loadJobs(true); announce($("batch-progress").textContent + " Open the document list to see processing status.");
   }
   function configure(config) {
     const required = ["household_fields", "member_fields", "modes", "accepted_mime_types"];
-    if (required.some((key) => !Array.isArray(config[key])) || !config.csrf_token || !(Number(config.max_upload_bytes) > 0)) throw new ApiError("Konfigurasi layanan belum lengkap. Hubungi pengelola aplikasi.");
+    if (required.some((key) => !Array.isArray(config[key])) || !config.csrf_token || !(Number(config.max_upload_bytes) > 0)) throw new ApiError("Service configuration is incomplete. Contact the application operator.");
     const cloud = config.runtime === "private_cloud" && config.local_only === false && config.private_access === "ssh_tunnel";
-    if (config.local_only !== true && !cloud) throw new ApiError("Lingkungan layanan ini belum didukung.");
-    if (cloud && (config.data_region !== "ap-batam-1" || !Array.isArray(config.inference_regions) || !config.inference_regions.length || !config.inference_regions.every((region) => typeof region === "string" && /^[a-z0-9-]+$/.test(region)) || config.live_oci_enabled !== true || config.modes.length !== 1 || config.modes[0].id !== "oci" || config.capabilities?.manual_retry !== false)) throw new ApiError("Konfigurasi cloud belum lengkap. Hubungi pengelola aplikasi.");
+    if (config.local_only !== true && !cloud) throw new ApiError("This service environment is unsupported.");
+    if (cloud && (config.data_region !== "ap-batam-1" || !Array.isArray(config.inference_regions) || !config.inference_regions.length || !config.inference_regions.every((region) => typeof region === "string" && /^[a-z0-9-]+$/.test(region)) || config.live_oci_enabled !== true || config.modes.length !== 1 || config.modes[0].id !== "oci" || config.capabilities?.manual_retry !== false)) throw new ApiError("Cloud configuration is incomplete. Contact the application operator.");
     state.config = config;
     $("nik-review-nav").hidden = config.runtime !== "private_cloud";
     state.cloudDisclosure = "";
     state.currentModelLabel = typeof config.model_display_name === "string" && config.model_display_name.trim() ? config.model_display_name.trim().slice(0, 120) : "OCI Generative AI";
-    const select = $("processing-mode"); select.replaceChildren(el("option", "", "Pilih cara membaca")); select.firstElementChild.value = "";
+    const select = $("processing-mode"); select.replaceChildren(el("option", "", "Choose a reading mode")); select.firstElementChild.value = "";
     for (const mode of config.modes) {
       const label = cloud && mode.id === "oci" ? `${state.currentModelLabel} (OCI GenAI)` : modeLabel(mode.id);
-      const option = el("option", "", `${label}${mode.available ? "" : " · tidak tersedia"}`); option.value = mode.id; option.disabled = !mode.available; select.append(option);
+      const option = el("option", "", `${label}${mode.available ? "" : " · unavailable"}`); option.value = mode.id; option.disabled = !mode.available; select.append(option);
     }
     const available = config.modes.some((item) => item.available);
     const live = config.live_oci_enabled === true;
-    $("privacy-copy").textContent = live ? "Data tersimpan di laptop. Mode OCI mengirim gambar yang disetujui ke layanan AI." : "Gambar, hasil latihan, dan keputusan pemeriksaan tersimpan di laptop ini.";
-    $("welcome-note").textContent = `${live ? "Mode OCI hanya untuk gambar yang disetujui." : "Latihan lokal menggunakan data contoh tanpa panggilan AI."}`;
-    $("runtime-label").textContent = cloud ? "OCI Batam" : "Latihan lokal";
+    $("privacy-copy").textContent = live ? "Data is stored on this computer. OCI mode sends approved images to the AI service." : "Images, practice results and review decisions stay on this computer.";
+    $("welcome-note").textContent = `${live ? "OCI mode accepts approved images only." : "Local practice uses sample data without AI calls."}`;
+    $("runtime-label").textContent = cloud ? "OCI Batam" : "Local practice";
     if (cloud) {
-      const names = { "ap-batam-1": "Batam", "me-dubai-1": "Dubai", "us-chicago-1": "Chicago" };
-      const regions = config.inference_regions.map(region => names[region] || region).join(", ");
-      const external = typeof config.external_processing_location === "string" ? config.external_processing_location.trim().slice(0, 160) : "";
-      const processing = config.local_ocr_enabled === true && config.inference_provider === "Google" && external
-        ? `Gambar dan teks OCR dapat diproses oleh Google di ${external} melalui OCI ${regions}. Catatan OCR disimpan di server privat.`
-        : config.inference_provider === "Google" && external
-        ? `Google memproses gambar di ${external} melalui OCI ${regions}.`
-        : config.inference_provider === "OCI" ? `Gambar diproses di OCI ${regions}.`
-        : `Rute pemrosesan melalui OCI ${regions}. Lokasi penyedia model belum tersedia.`;
-      state.cloudDisclosure = `Gambar asli dan hasil disimpan di OCI Batam. ${processing}`;
+      state.cloudDisclosure = "Images and results are stored in OCI Batam. AI extraction takes place outside Indonesia.";
       $("privacy-copy").textContent = state.cloudDisclosure;
-      $("welcome-note").textContent = `Keputusan dicatat atas nama ${config.reviewer_identity || "petugas terdaftar"}`;
+      $("welcome-note").textContent = `Decisions are recorded under ${config.reviewer_identity || "registered operator"}`;
     }
     visible("retry-job", config.capabilities?.manual_retry !== false);
     modeDescription();
@@ -845,8 +836,8 @@
     for (const id of ["processing-readiness", "upload-processing-readiness"]) {
       const node = $(id); node.replaceChildren(); node.hidden = status === "AVAILABLE";
       node.classList.toggle("readiness-unknown", status === "UNKNOWN");
-      if (status === "PAUSED") node.append(el("strong", "", state.config?.live_oci_enabled ? "Pembacaan AI dijeda. " : "Pemrosesan dijeda. "), document.createTextNode("Berkas yang sudah diunggah tetap dalam antrean."));
-      else if (status === "UNKNOWN") node.append(el("strong", "", "Status layanan belum tersedia. "), document.createTextNode("Berkas tersimpan tetap bisa dibuka. Unggahan baru mungkin perlu menunggu."));
+      if (status === "PAUSED") node.append(el("strong", "", state.config?.live_oci_enabled ? "AI extraction is paused. " : "Processing is paused. "), document.createTextNode("Uploaded files remain in the queue."));
+      else if (status === "UNKNOWN") node.append(el("strong", "", "Service status is unavailable. "), document.createTextNode("You can still open saved files. New uploads may need to wait."));
     }
   }
   async function loadProcessingStatus(force = false) {
@@ -882,7 +873,7 @@
   $("welcome-upload").addEventListener("click", openUpload);
   $("close-upload").addEventListener("click", closeUpload); $("cancel-upload").addEventListener("click", closeUpload);
   $("upload-dialog").addEventListener("cancel", (event) => { if (state.uploading) event.preventDefault(); });
-  $("selected-original").addEventListener("load", () => { $("selected-dimensions").textContent = `${$("selected-original").naturalWidth} × ${$("selected-original").naturalHeight} piksel`; });
+  $("selected-original").addEventListener("load", () => { $("selected-dimensions").textContent = `${$("selected-original").naturalWidth} × ${$("selected-original").naturalHeight} pixels`; });
   $("check-image").addEventListener("click", checkImage);
   $("upload-form").addEventListener("submit", upload); $("upload-file").addEventListener("change", event => addFiles(event.target.files));
   $("case-id").addEventListener("input", renderBatch);
@@ -900,7 +891,7 @@
   $("toggle-density").addEventListener("click", () => {
     const compact = document.body.classList.toggle("compact-rows");
     $("toggle-density").setAttribute("aria-pressed", String(compact));
-    $("toggle-density").textContent = compact ? "Renggangkan baris" : "Rapatkan baris";
+    $("toggle-density").textContent = compact ? "Expand row spacing" : "Compact rows";
   });
   for (const button of document.querySelectorAll("[data-activity-filter]")) button.addEventListener("click", () => {
     $("status-filter").value = button.dataset.activityFilter;
@@ -932,7 +923,7 @@
   $("previous-document").addEventListener("click", () => moveDocument(-1));
   $("next-document").addEventListener("click", () => moveDocument(1));
   $("view-uploaded-documents").addEventListener("click", () => { closeUpload(); requestNavigation(() => { $("list-scope").value = "batch"; $("status-filter").value = ""; $("job-search").value = ""; state.page = 1; state.overviewScroll = 0; showOverview(); }); });
-  $("toggle-data-width").addEventListener("click", () => { state.dataWide = !state.dataWide; $("detail").querySelector(".review-workspace").classList.toggle("data-wide", state.dataWide); $("toggle-data-width").setAttribute("aria-pressed", String(state.dataWide)); $("toggle-data-width").textContent = state.dataWide ? "Tampilkan gambar asli" : "Perlebar tabel"; requestAnimationFrame(() => { if (!state.dataWide) renderImage(); }); });
+  $("toggle-data-width").addEventListener("click", () => { state.dataWide = !state.dataWide; $("detail").querySelector(".review-workspace").classList.toggle("data-wide", state.dataWide); $("toggle-data-width").setAttribute("aria-pressed", String(state.dataWide)); $("toggle-data-width").textContent = state.dataWide ? "Show original image" : "Expand table"; requestAnimationFrame(() => { if (!state.dataWide) renderImage(); }); });
   $("detail-retry").addEventListener("click", () => { if (state.selectedId && state.config) loadDetail(state.selectedId); else initialize(); });
   $("reload-detail").addEventListener("click", () => requestNavigation(() => loadDetail(state.selectedId)));
   $("load-latest").addEventListener("click", () => requestNavigation(() => loadDetail(state.selectedId)));
@@ -940,7 +931,7 @@
   $("export-job").addEventListener("click", async () => {
     const jobId = state.selectedId; const filename = safeDownloadName("saved-record");
     $("export-job").disabled = true;
-    try { const data = await api(`/api/jobs/${encodeURIComponent(jobId)}/export`); downloadJson(data, filename); announce("Data tersimpan telah diunduh."); }
+    try { const data = await api(`/api/jobs/${encodeURIComponent(jobId)}/export`); downloadJson(data, filename); announce("Saved data downloaded."); }
     catch (error) { showGlobal(error.message); }
     finally { $("export-job").disabled = false; }
   });

@@ -1,81 +1,157 @@
 
 let cases=[], csrf="";
-const labels={confirm:'Sesuai cetakan',correct:'Dikoreksi',unreadable:'Masih tidak terbaca'};
+const labels={confirm:'Confirmed as printed',correct:'Corrected',unreadable:'Still unreadable'};
 const $=id=>document.getElementById(id);
 let current=cases[0], openedVersion=null;
 const decisions=new Map();
 let busy=false, pendingRequest=null;
 async function api(url,options={}){
  const response=await fetch(url,{cache:'no-store',...options});const result=await response.json();
- if(!response.ok){const e=new Error(result.error?.message||'Permintaan gagal.');e.status=response.status;throw e}return result
+ if(!response.ok){const e=new Error(result.error?.message||'Request failed.');e.status=response.status;throw e}return result
 }
 async function refresh(){const result=await api('/api/nik-review'+(new URLSearchParams(location.search).has('job')?'?job='+encodeURIComponent(new URLSearchParams(location.search).get('job')):''));cases=result.cases;decisions.clear();for(const c of cases)if(c.decision)decisions.set(c.key,c.decision)}
 function node(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 // The API includes saved reason text from several pilot releases.
+const legacyReasons = new Map([
+  [
+    "Nomor tersimpan tidak memenuhi format 16 digit. Periksa format yang tercetak.",
+    "The saved number does not match the 16-digit format. Check the format printed on the card."
+  ],
+  [
+    "Nomor yang sama muncul pada beberapa anggota.",
+    "The same number appears on several members."
+  ],
+  [
+    "Bagian tanggal atau kode jenis kelamin pada NIK berbeda dengan data anggota.",
+    "The NIK date or sex code differs from the member data."
+  ],
+  [
+    "Bacaan awal atau hybrid kosong atau berbeda dari nilai tersimpan.",
+    "The initial or hybrid reading is missing or differs from the saved number."
+  ],
+  [
+    "OCR belum menguatkan satu baris dengan seluruh digit yang sama.",
+    "OCR did not confirm a unique row with all the same digits."
+  ],
+  [
+    "Lokasi baris belum terverifikasi. Periksa gambar konteks.",
+    "The row location is unverified. Check the context image."
+  ],
+  [
+    "Pembacaan ulang belum dapat dikonfirmasi. Periksa crop.",
+    "The reread could not be confirmed. Check the crop."
+  ],
+  [
+    "Digit bacaan ulang cocok dengan hasil tersimpan.",
+    "The reread matches the saved digits."
+  ],
+  [
+    "Bacaan ulang berbeda atau mengandung digit yang tidak terbaca.",
+    "The reread differs or contains unreadable digits."
+  ],
+  [
+    "Gemini menandai crop sebagai ragu.",
+    "The model marked the crop as uncertain."
+  ],
+  [
+    "Bacaan baru berbeda dengan koreksi petugas pada foto dan baris yang sama. Cocokkan NIK dengan cetakan.",
+    "The reading differs from an earlier correction for this image and row. Check the print."
+  ],
+  [
+    "Bacaan ulang cocok dengan nomor tersimpan. Konflik data di atas masih perlu diperiksa.",
+    "The reread matches the saved NIK. The data conflict still needs review."
+  ],
+  [
+    "OCR awal belum menemukan satu baris yang cukup jelas dan cocok dengan seluruh nomor.",
+    "Initial OCR could not confirm all digits on one clearly identified row."
+  ],
+  [
+    "Saat membaca ulang crop, Gemini masih ragu meski digitnya sama.",
+    "The crop reread returned the same digits with uncertainty."
+  ],
+  [
+    "Bacaan ulang tidak menghasilkan urutan digit yang sama dengan nomor tersimpan.",
+    "The reread did not return the same sequence of digits as the saved NIK."
+  ]
+]);
+const reasonKeys = new Map([...legacyReasons].map(([old, current]) => [current, old]));
+const partNames = {hari:'day',bulan:'month',tahun:'year','hari dan bulan':'day and month','bulan dan tahun':'month and year'};
+function readableReason(value) {
+  if (legacyReasons.has(value)) return legacyReasons.get(value);
+  let m = /^Bagian (hari dan bulan|bulan dan tahun|bulan|tahun|hari) pada NIK tidak cocok dengan data kelahiran anggota yang tersimpan\.$/.exec(value);
+  if (m) return 'The ' + partNames[m[1]] + ' in the NIK differs from the recorded birth date.';
+  m = /^Bacaan ulang berbeda pada digit ke-([1-9]\d?) dari kiri\.$/.exec(value);
+  if (m) return 'The reread differs at digit ' + m[1] + ' from the left.';
+  m = /^Nomor tersimpan berisi (\d{1,2}) digit\./.exec(value);
+  if (m) return 'The saved NIK contains ' + m[1] + ' digits. Check its printed length.';
+  return value;
+}
+const reviewTopics = {"Lokasi belum pasti": "Row location uncertain", "Format NIK": "NIK format", "Konflik data": "Conflicting data", "Bacaan berbeda": "Readings differ", "Digit samar": "Unclear digit", "Konflik koreksi petugas": "Earlier correction differs"};
 function nikReviewGuide(reasons) {
   const observations = Array.isArray(reasons) ? reasons.filter(s => typeof s === 'string' && s.trim()) : [];
-  const has = pattern => observations.some(text => pattern.test(text));
-  const match = pattern => observations.map(text => text.match(pattern)).find(Boolean);
+  const keys = observations.map(text => reasonKeys.get(text) || text);
+  const has = pattern => keys.some(text => pattern.test(text));
+  const match = pattern => keys.map(text => text.match(pattern)).find(Boolean);
   const facts = [];
   const checks = [];
   const add = (fact, check) => { facts.push(fact); if (check) checks.push(check); };
   if (has(/^Lokasi baris belum terverifikasi/)) {
-    add('Posisi NIK pada gambar belum bisa dipastikan.', 'Buka seluruh baris. Cocokkan nama dan nomor baris sebelum membaca NIK.');
+    add('The location of this NIK on the image is uncertain.', 'Open the full row. Match the name and row number before reading the NIK.');
   }
   if (has(/^Bacaan baru berbeda dengan koreksi petugas/)) {
-    add('Hasil baca kali ini berbeda dari koreksi petugas sebelumnya untuk foto dan baris yang sama.',
-        'Periksa lagi angka yang tercetak sebelum menyimpan keputusan.');
+    add('This reading differs from an earlier reviewer correction for the same image and row.',
+        'Check the printed digits before saving a decision.');
   }
   if (has(/^Nomor yang sama muncul pada beberapa anggota/)) {
-    add('NIK yang sama terbaca pada lebih dari satu anggota.',
-        'Buka seluruh baris dan cocokkan nama dengan NIK di sebelahnya.');
+    add('The same NIK appears on more than one member.',
+        'Open the full row and match the name with the NIK beside it.');
   }
   const birthPart = match(/^Bagian (hari dan bulan|bulan dan tahun|bulan|tahun|hari) pada NIK tidak cocok dengan data kelahiran anggota yang tersimpan\.$/);
   if (birthPart || has(/^Bagian tanggal (pada NIK berbeda dari tanggal lahir|atau kode jenis kelamin pada NIK berbeda)/)) {
-    const field = birthPart ? birthPart[1] : '';
-    const why = field ? 'Bagian ' + field + ' pada NIK berbeda dari tanggal lahir anggota ini.' :
-      has(/^Bagian tanggal atau kode jenis kelamin/) ? 'Kode tanggal lahir atau jenis kelamin pada NIK berbeda dari data anggota ini.' :
-      'Kode tanggal pada NIK berbeda dari tanggal lahir anggota ini.';
-    add(why, 'Cocokkan NIK dengan cetakan pada baris anggota ini. Jika digitnya memang sama dengan hasil awal, pilih “Konfirmasi sesuai cetakan”.');
+    const field = birthPart ? partNames[birthPart[1]] : '';
+    const why = field ? 'The ' + field + ' in the NIK differs from this member’s recorded birth date.' :
+      has(/^Bagian tanggal atau kode jenis kelamin/) ? 'The birth-date or sex code in the NIK conflicts with this member’s data.' :
+      'The date code in the NIK differs from the member’s recorded birth date.';
+    add(why, 'Compare the printed NIK on this member’s row with the original reading. If the digits match, choose Confirm as printed.');
   }
   const length = match(/^Nomor tersimpan berisi (\d{1,2}) digit\./);
   if (length || has(/^Nomor tersimpan tidak memenuhi format 16 digit/)) {
-    add(length ? 'Hasil awal berisi ' + length[1] + ' digit.' : 'Format hasil awal berbeda dari NIK 16 digit.',
-        'Hitung digit pada cetakan. Untuk KK format lama, salin panjang aslinya tanpa menambah nol.');
+    add(length ? 'The original reading contains ' + length[1] + ' digits.' : 'The original reading differs from the usual 16-digit NIK format.',
+        'Count the printed digits. For a legacy card, keep its printed length and do not add zeros.');
   }
   const position = match(/^Bacaan ulang berbeda pada digit ke-([1-9]\d?) dari kiri\.$/);
   if (position) {
-    add('Dua pembacaan berbeda pada digit ke-' + position[1] + ' dari kiri.',
-        'Hitung dari kiri pada gambar, lalu bandingkan digit itu dengan hasil awal.');
+    add('The two readings differ at digit ' + position[1] + ' from the left.',
+        'Count from the left on the image and compare that digit with the original reading.');
   } else if (has(/^Bacaan ulang berbeda pada satu digit\./)) {
-    add('Dua pembacaan berbeda pada satu digit.', 'Bandingkan NIK pada gambar dengan hasil awal dari kiri ke kanan.');
+    add('The two readings differ by one digit.', 'Compare the printed NIK with the original reading from left to right.');
   } else if (has(/^Bacaan ulang (berbeda atau mengandung digit yang tidak terbaca|tidak menghasilkan urutan digit yang sama)/)) {
-    add('Bacaan ulang belum memastikan deretan angka yang sama dengan hasil awal.',
-        'Bandingkan digit dari kiri ke kanan. Pilih “Masih tidak terbaca” jika ada angka yang belum jelas.');
+    add('The reread could not confirm the same sequence of digits.',
+        'Compare the digits from left to right. Choose Still unreadable if any digit is unclear.');
   }
   const uncertain = has(/^(Gemini menandai crop sebagai ragu|Saat membaca ulang crop, Gemini masih ragu)/);
   const same = has(/^(Digit bacaan ulang cocok|Bacaan ulang cocok dengan nomor tersimpan|Saat membaca ulang crop, Gemini masih ragu meski digitnya sama)/);
   if (uncertain) {
-    add(same ? 'Kedua bacaan menghasilkan angka yang sama, tetapi ada digit yang masih diragukan saat baca ulang.' :
-      'Bacaan ulang masih meragukan sebagian digit.', 'Coba ukuran asli dan zoom. Pilih “Masih tidak terbaca” jika digitnya tetap samar.');
+    add(same ? 'Both readings returned the same number, but the reread marked some digits as uncertain.' :
+      'The reread marked some digits as uncertain.', 'Compare the original size with the zoomed view. If the digits remain unclear, choose Still unreadable.');
   } else if (same && facts.length) {
-    facts.push('Bacaan ulang cocok dengan hasil awal. Alasan di atas masih perlu diperiksa.');
+    facts.push('The reread matches the original number. The issue above still needs review.');
   }
   if (!facts.length) {
     if (has(/^OCR (awal belum menemukan satu baris|belum menguatkan satu baris)/)) {
-      add('Pembacaan gambar belum menemukan satu baris yang jelas dengan seluruh digit yang sama.',
-          'Buka seluruh baris, cocokkan nama anggota, lalu bandingkan NIK dari kiri ke kanan.');
+      add('Image recognition did not identify one clear row with the complete matching number.',
+          'Open the full row, check the member name and compare the NIK from left to right.');
     } else if (has(/^Bacaan awal atau hybrid kosong atau berbeda/)) {
-      add('Salah satu pembacaan awal kosong atau berbeda dari NIK yang tersimpan.',
-          'Bandingkan digit hasil awal dengan NIK yang tercetak.');
+      add('One of the initial readings was missing or differed from the saved NIK.',
+          'Compare the original reading with the printed NIK.');
     } else if (has(/^Pembacaan ulang belum dapat dikonfirmasi/)) {
-      add('Hasil baca ulang belum tersedia untuk memastikan NIK.', 'Cocokkan langsung dengan NIK pada gambar.');
+      add('No confirmed reread is available for this NIK.', 'Compare the number directly with the printed NIK.');
     } else {
-      facts.push(...observations);
+      facts.push(...observations.map(readableReason));
     }
   }
-  if (!facts.length) facts.push('Alasan khusus untuk kasus ini belum tercatat.');
-  return {facts, check:checks[0] || 'Cocokkan nama dan NIK pada baris anggota ini sebelum memilih keputusan.', observations};
+  if (!facts.length) facts.push('No specific reason was recorded for this case.');
+  return {facts, check:checks[0] || 'Match the name and NIK on this member’s row before choosing a decision.', observations:observations.map(readableReason)};
 }
 function displayNikGuide(c) {
   const guide = nikReviewGuide(c.reasons);
@@ -92,25 +168,25 @@ function inFilter(c){
  switch($('filter').value){case 'open':return !d;case 'done':return !!d;case 'unreadable':return d?.action==='unreadable';default:return true}
 }
 function sidebar(){
- $('cohort').textContent=cases.length+' NIK · '+new Set(cases.map(c=>c.doc)).size+' KK';
- $('count').textContent=decisions.size+' dari '+cases.length+' sudah diperiksa';$('bar').max=Math.max(1,cases.length);$('bar').value=decisions.size;
+ $('cohort').textContent=cases.length+' NIKs · '+new Set(cases.map(c=>c.doc)).size+' cards';
+ $('count').textContent=decisions.size+' of '+cases.length+' reviewed';$('bar').max=Math.max(1,cases.length);$('bar').value=decisions.size;
  const q=$('queue');q.replaceChildren();
  cases.filter(inFilter).forEach(c=>{const b=document.createElement('button');b.type='button';b.dataset.id=c.id;b.setAttribute('aria-current',String(c===current));const d=decisions.get(c.key);
- b.append(node('b',c.doc+' · Baris '+c.row),node('small',c.topic+' · '+(d?labels[d.action]:'Belum diperiksa')));b.onclick=()=>show(c);q.append(b)});
- if(!q.children.length)q.append(node('p','Tidak ada kasus pada filter ini.'));
+ b.append(node('b',c.doc+' · Row '+c.row),node('small',(reviewTopics[c.topic] || c.topic)+' · '+(d?labels[d.action]:'Unreviewed')));b.onclick=()=>show(c);q.append(b)});
+ if(!q.children.length)q.append(node('p','No cases match this filter.'));
 }
 function zoom(){const factor=Number($('zoom').value);$('photo').style.width=(current.width*factor)+'px';
- $('amount').textContent=factor.toLocaleString('id-ID')+'×';$('zoom').setAttribute('aria-valuetext',$('amount').textContent);$('native').hidden=factor===1;}
+ $('amount').textContent=factor.toLocaleString('en-US')+'×';$('zoom').setAttribute('aria-valuetext',$('amount').textContent);$('native').hidden=factor===1;}
 function show(c){
  current=c;sidebar();$('panel').hidden=!c;$('empty-detail').hidden=!!c;if(!c)return;
- $('title').textContent=c.doc+' · Anggota baris '+c.row;$('topic').textContent=c.topic;displayNikGuide(c);
+ $('title').textContent=c.doc+' · Member row '+c.row;$('topic').textContent=reviewTopics[c.topic] || c.topic;displayNikGuide(c);
  $('photo').src=c.image;$('small').src=c.image;$('small').width=c.width;$('ctximg').src=c.context;$('ctx').open=false;
  $('zoom').value=1;zoom();$('frame').scrollLeft=0;$('stored').textContent=c.stored;
  $('form').hidden=true;$('actions').hidden=false;$('error').textContent='';$('entry').removeAttribute('aria-invalid');
  const d=decisions.get(c.key);openedVersion=c.revision;$('last').hidden=!d;$('last').replaceChildren();
- if(d){$('last').append(node('strong',labels[d.action]),node('p',d.action==='unreadable'?'Perlu foto yang lebih jelas.':d.action==='correct'?'Nilai koreksi: '+d.value:'NIK hasil baca awal sudah dicocokkan dengan cetakan.'));
- $('last').append(node('small','Dicatat oleh '+d.operator+' · '+new Date(d.time).toLocaleString('id-ID')));
- if(c.structural&&d.action!=='unreadable')$('last').append(node('small','Keputusan ini mencatat angka pada cetakan. Perbedaan pada data anggota tetap perlu ditelusuri.'))}
+ if(d){$('last').append(node('strong',labels[d.action]),node('p',d.action==='unreadable'?'A clearer photo is needed.':d.action==='correct'?'Corrected value: '+d.value:'The original reading matches the printed NIK.'));
+ $('last').append(node('small','Recorded by '+d.operator+' · '+new Date(d.time).toLocaleString('en-US')));
+ if(c.structural&&d.action!=='unreadable')$('last').append(node('small','This decision records what is printed. The member data discrepancy still needs investigation.'))}
 }
 function chooseFiltered(){const list=cases.filter(inFilter);show(list.includes(current)?current:list[0]);}
 function lock(on){
@@ -120,15 +196,15 @@ function lock(on){
 async function persist(action,value){
  const c=current;if(!c||busy)return;const rev=openedVersion;const signature=JSON.stringify([c.key,rev,action,value??null]);
  if(!pendingRequest||pendingRequest.signature!==signature)pendingRequest={signature,id:crypto.randomUUID()};
- lock(true);$('notice').textContent='Menyimpan keputusan…';
+ lock(true);$('notice').textContent='Saving decision…';
  try{
   await api('/api/nik-review/'+c.key+'/decision',{method:'POST',headers:{'Content-Type':'application/json','X-KK-Pilot-Token':csrf},body:JSON.stringify({action,value:value??null,expected_revision:rev,request_id:pendingRequest.id})});
   await refresh();pendingRequest=null;
   const list=cases.filter(inFilter);show(list.find(x=>!decisions.has(x.key))??list.find(x=>x.key===c.key)??list[0]);
-  $('notice').textContent='Keputusan untuk '+c.doc+' baris '+c.row+' tersimpan. '+labels[action]+'.'+(decisions.size===cases.length?' Semua kasus sudah diperiksa.':'');if(current)$('title').focus();
+  $('notice').textContent='Decision for '+c.doc+' row '+c.row+' saved. '+labels[action]+'.'+(decisions.size===cases.length?' All cases have been reviewed.':'');if(current)$('title').focus();
  }catch(e){
   if(e.status===409){await refresh();show(cases.find(x=>x.key===c.key));pendingRequest=null}
-  $('notice').textContent=e.status?e.message:'Status simpan belum terkonfirmasi. Coba kembali dengan keputusan yang sama.';
+  $('notice').textContent=e.status?e.message:'Save status is unconfirmed. Retry with the same decision.';
  }finally{lock(false)}
 }
 $('zoom').oninput=zoom;$('reset').onclick=()=>{$('zoom').value=1;zoom();$('frame').scrollLeft=0};
@@ -138,13 +214,13 @@ $('cancel').onclick=()=>{$('form').hidden=true;$('actions').hidden=false;$('corr
 $('entry').oninput=()=>{$('entry').removeAttribute('aria-invalid');$('error').textContent=''};
 $('form').onsubmit=e=>{e.preventDefault();const v=$('entry').value.trim();
  const digit=s=>s.replace(/[ .-]/g,'');let error='';
- if(!/^[0-9]+(?:[ .-]+[0-9]+)*$/.test(v))error='Masukkan angka yang terbaca. Jika masih ragu, pilih “Masih tidak terbaca”.';
- else if(!current.legacy&&digit(v).length!==16)error='NIK ini memerlukan 16 digit. Periksa kembali atau tandai masih tidak terbaca.';
- else if(digit(v)===digit(current.stored))error='Angkanya sama dengan nilai tersimpan. Pilih konfirmasi jika sesuai cetakan.';
+ if(!/^[0-9]+(?:[ .-]+[0-9]+)*$/.test(v))error='Enter the digits you can read. If a digit remains unclear, choose Still unreadable.';
+ else if(!current.legacy&&digit(v).length!==16)error='This NIK requires 16 digits. Check the print again or mark it as unreadable.';
+ else if(digit(v)===digit(current.stored))error='These digits match the original reading. Choose Confirm as printed if they match the image.';
  if(error){$('error').textContent=error;$('entry').setAttribute('aria-invalid','true');$('entry').focus();return}persist('correct',v)};
 async function init(){
  $('panel').hidden=true;
  try{const cfg=await api('/api/config');csrf=cfg.csrf_token;await refresh();show(cases.find(c=>!decisions.has(c.key))??cases[0])}
- catch(e){$('notice').textContent='Antrean belum bisa dibuka. Muat ulang untuk mencoba lagi.'}
+ catch(e){$('notice').textContent='Could not open the queue. Reload the page to try again.'}
 }
 init();
