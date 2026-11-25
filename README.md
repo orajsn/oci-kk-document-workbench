@@ -4,7 +4,7 @@ A *Kartu Keluarga* (KK) is an Indonesian family card. One image can contain an e
 
 When the application cannot verify a NIK, the reviewer can open the relevant row, compare the printed digits with the original reading, and confirm, correct or mark the number unreadable. The original extraction remains available after a correction.
 
-**[Try the two-card browser demo](https://orajsn.github.io/oci-kk-document-workbench/field-review.html)** or **[download the release](https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.4)**.
+**[Try the two-card browser demo](https://orajsn.github.io/oci-kk-document-workbench/field-review.html)** or **[download the two-card v0.4.4 package](https://github.com/orajsn/oci-kk-document-workbench/releases/tag/v0.4.4)**.
 
 ## Choose a way to try it
 
@@ -15,6 +15,8 @@ When the application cannot verify a NIK, the reviewer can open the relevant row
 | OCI deployment | Process approved images using OCR and OCI Generative AI, save the extraction in Oracle Database and route uncertain NIKs for review. | In the Batam pilot, originals and records are stored in Batam. Model inference runs outside Indonesia. |
 
 The public repository contains the portable application and fictional examples. The hosted pilot also has a separately managed HTTPS gateway and participant login. The implementation here includes the private operator interface accessed over an SSH tunnel.
+
+For the Oracle operator screens, follow [Review a batch](docs/REVIEW-A-BATCH.md) from the upload count to the printed member row and saved decision.
 
 ## Run your first batch
 

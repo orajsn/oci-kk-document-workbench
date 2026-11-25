@@ -33,6 +33,13 @@ _JOB_COLUMNS = f"""
 _JOB_FROM = f"""FROM {SCHEMA}.kk_jobs j
     JOIN {SCHEMA}.kk_documents d ON d.document_id=j.document_id AND d.case_id=j.case_id
 """
+_OPEN_NIK_BY_JOB = f"""OUTER APPLY (
+                    SELECT COUNT(*) AS open_count,
+                           MIN(c.field_key) KEEP (DENSE_RANK FIRST ORDER BY c.member_row,c.field_key) AS first_key
+                    FROM {SCHEMA}.kk_nik_review_cases c
+                    WHERE c.job_id=j.job_id AND NOT EXISTS (
+                        SELECT 1 FROM {SCHEMA}.kk_nik_review_events v WHERE v.field_key=c.field_key)
+                ) nr"""
 _SCOPE = "j.cloud_scope_id=:scope_id AND j.processing_mode='oci'"
 
 
@@ -236,17 +243,28 @@ class CloudReviewRepository:
             where.append("(INSTR(LOWER(j.case_id),LOWER(:search))>0 OR INSTR(LOWER(d.filename),LOWER(:search))>0 OR INSTR(j.job_id,:search)>0)")
             binds["search"] = search
         with self._session() as connection, connection.cursor() as cursor:
-            cursor.execute(f"""SELECT {_JOB_COLUMNS},
+            def list_query(review_columns, review_join):
+                return f"""SELECT {_JOB_COLUMNS},
                     CASE WHEN e.extraction_id IS NULL THEN 0 ELSE 1 END AS result_available,
                     CASE WHEN e.extraction_id IS NULL THEN NULL ELSE
                         (SELECT COUNT(*) FROM {SCHEMA}.kk_members m
                          WHERE m.extraction_id=e.extraction_id)
-                    END AS member_count
+                    END AS member_count, {review_columns}
                 {_JOB_FROM}
+                {review_join}
                 LEFT JOIN {SCHEMA}.kk_extractions e
                     ON e.job_id=j.job_id AND e.job_version=j.current_extraction_version
                 WHERE {' AND '.join(where)} ORDER BY j.created_at DESC,j.job_id DESC
-                FETCH FIRST 500 ROWS ONLY""", binds)
+                FETCH FIRST 500 ROWS ONLY"""
+
+            try:
+                cursor.execute(list_query("nr.open_count AS nik_open_count, nr.first_key AS nik_first_open_key",
+                                          _OPEN_NIK_BY_JOB), binds)
+            except self.driver.DatabaseError as exc:
+                # Installations without the optional NIK review tables can still open their documents.
+                if not exc.args or getattr(exc.args[0], "code", None) != 942:
+                    raise
+                cursor.execute(list_query("NULL AS nik_open_count, NULL AS nik_first_open_key", ""), binds)
             jobs = []
             for row in _rows(cursor):
                 summary = self._summary(row)
@@ -255,6 +273,9 @@ class CloudReviewRepository:
                 summary["result_available"] = bool(int(row["result_available"]))
                 summary["member_count"] = (int(row["member_count"])
                                            if row["member_count"] is not None else None)
+                summary["nik_open_count"] = (int(row["nik_open_count"])
+                                             if row["nik_open_count"] is not None else None)
+                summary["nik_first_open_key"] = row["nik_first_open_key"]
                 jobs.append(summary)
             return jobs
 

@@ -172,18 +172,42 @@ function sidebar(){
  $('count').textContent=decisions.size+' of '+cases.length+' reviewed';$('bar').max=Math.max(1,cases.length);$('bar').value=decisions.size;
  const q=$('queue');q.replaceChildren();
  cases.filter(inFilter).forEach(c=>{const b=document.createElement('button');b.type='button';b.dataset.id=c.id;b.setAttribute('aria-current',String(c===current));const d=decisions.get(c.key);
- b.append(node('b',c.doc+' · Row '+c.row),node('small',(reviewTopics[c.topic] || c.topic)+' · '+(d?labels[d.action]:'Unreviewed')));b.onclick=()=>show(c);q.append(b)});
+ b.append(node('b',(c.reference || c.doc)+' · Row '+c.row),node('small',(reviewTopics[c.topic] || c.topic)+' · '+(d?labels[d.action]:'Unreviewed')));b.onclick=()=>show(c);q.append(b)});
  if(!q.children.length)q.append(node('p','No cases match this filter.'));
 }
+function setSource(id,url) {
+ const image=$(id);
+ if(image.getAttribute('src')!==url)image.src=url;
+}
+function setEvidenceView(mode) {
+ const row=mode==='row';
+ $('ctx').hidden=!row;$('digit-view').hidden=row;
+ $('view-row').setAttribute('aria-pressed',String(row));
+ $('view-digits').setAttribute('aria-pressed',String(!row));
+}
+function applyContrast() {
+ const value=Number($('contrast').value);
+ $('contrast-value').textContent=value+'%';
+ for(const id of ['ctximg','photo','small'])$(id).style.filter='contrast('+value+'%)';
+}
+$('contrast').addEventListener('input',applyContrast);
+$('view-row').onclick=()=>setEvidenceView('row');
+$('view-digits').onclick=()=>setEvidenceView('digits');
 function zoom(){const factor=Number($('zoom').value);$('photo').style.width=(current.width*factor)+'px';
  $('amount').textContent=factor.toLocaleString('en-US')+'×';$('zoom').setAttribute('aria-valuetext',$('amount').textContent);$('native').hidden=factor===1;}
-function show(c){
- current=c;sidebar();$('panel').hidden=!c;$('empty-detail').hidden=!!c;if(!c)return;
- $('title').textContent=c.doc+' · Member row '+c.row;$('topic').textContent=reviewTopics[c.topic] || c.topic;displayNikGuide(c);
- $('photo').src=c.image;$('small').src=c.image;$('small').width=c.width;$('ctximg').src=c.context;$('ctx').open=false;
+function show(c, missingLink=false){
+ current=c;sidebar();$('panel').hidden=!c;$('empty-detail').hidden=!!c;if(!c){if(missingLink)$('empty-detail').textContent='This case is unavailable. Choose a case from the queue.';return;}
+ const url=new URL(location.href);
+ url.hash='kasus='+encodeURIComponent(c.key);
+ if(url.href!==location.href)history.replaceState(null,'',url);
+ $('case-link').href=url.href;
+ $('title').textContent=c.member_name || 'Member row '+c.row;$('topic').textContent=reviewTopics[c.topic] || c.topic;displayNikGuide(c);
+ $('member-caption').textContent=(c.reference || c.doc) + ' · Member row ' + c.row;
+ setSource('photo',c.image);setSource('small',c.image);setSource('ctximg',c.context);
+ $('small').width=c.width;setEvidenceView('row');$('contrast').value='100';applyContrast();
  $('zoom').value=1;zoom();$('frame').scrollLeft=0;$('stored').textContent=c.stored;
  $('form').hidden=true;$('actions').hidden=false;$('error').textContent='';$('entry').removeAttribute('aria-invalid');
- const d=decisions.get(c.key);openedVersion=c.revision;$('last').hidden=!d;$('last').replaceChildren();
+ const d=decisions.get(c.key);$('next-pending').hidden=!d;openedVersion=c.revision;$('last').hidden=!d;$('last').replaceChildren();
  if(d){$('last').append(node('strong',labels[d.action]),node('p',d.action==='unreadable'?'A clearer photo is needed.':d.action==='correct'?'Corrected value: '+d.value:'The original reading matches the printed NIK.'));
  $('last').append(node('small','Recorded by '+d.operator+' · '+new Date(d.time).toLocaleString('en-US')));
  if(c.structural&&d.action!=='unreadable')$('last').append(node('small','This decision records what is printed. The member data discrepancy still needs investigation.'))}
@@ -200,7 +224,7 @@ async function persist(action,value){
  try{
   await api('/api/nik-review/'+c.key+'/decision',{method:'POST',headers:{'Content-Type':'application/json','X-KK-Pilot-Token':csrf},body:JSON.stringify({action,value:value??null,expected_revision:rev,request_id:pendingRequest.id})});
   await refresh();pendingRequest=null;
-  const list=cases.filter(inFilter);show(list.find(x=>!decisions.has(x.key))??list.find(x=>x.key===c.key)??list[0]);
+  show(cases.find(x=>x.key===c.key));
   $('notice').textContent='Decision for '+c.doc+' row '+c.row+' saved. '+labels[action]+'.'+(decisions.size===cases.length?' All cases have been reviewed.':'');if(current)$('title').focus();
  }catch(e){
   if(e.status===409){await refresh();show(cases.find(x=>x.key===c.key));pendingRequest=null}
@@ -218,9 +242,39 @@ $('form').onsubmit=e=>{e.preventDefault();const v=$('entry').value.trim();
  else if(!current.legacy&&digit(v).length!==16)error='This NIK requires 16 digits. Check the print again or mark it as unreadable.';
  else if(digit(v)===digit(current.stored))error='These digits match the original reading. Choose Confirm as printed if they match the image.';
  if(error){$('error').textContent=error;$('entry').setAttribute('aria-invalid','true');$('entry').focus();return}persist('correct',v)};
+async function nextPending() {
+ if(busy)return;
+ const currentKey=current?.key;
+ $('next-pending').disabled=true;
+ try {
+   await refresh();
+   const local=cases.find(c=>!c.decision && c.key!==currentKey);
+   if(local){show(local);$('title').focus();return;}
+   let ids;
+   try {ids=JSON.parse(sessionStorage.getItem('kk.last-upload.v1.private_cloud'))?.ids;} catch {}
+   const currentJob=new URLSearchParams(location.search).get('job');
+   if(Array.isArray(ids) && ids.includes(currentJob)){
+     const data=await api('/api/jobs');
+     const next=data.jobs.filter(j=>ids.includes(j.id) && j.nik_open_count>0 && j.nik_first_open_key!==currentKey)
+       .sort((a,b)=>a.case_id.localeCompare(b.case_id,undefined,{numeric:true}))[0];
+     if(next){location.assign('/nik-review?job='+encodeURIComponent(next.id)+'#kasus='+encodeURIComponent(next.nik_first_open_key));return;}
+   }
+   $('notice').textContent="No further cases in this selection.";
+   $('next-pending').hidden=true;
+ }catch{ $('notice').textContent="Could not load the queue. Try again."; }
+ finally{ $('next-pending').disabled=false; }
+}
+$('next-pending').onclick=nextPending;
 async function init(){
  $('panel').hidden=true;
- try{const cfg=await api('/api/config');csrf=cfg.csrf_token;await refresh();show(cases.find(c=>!decisions.has(c.key))??cases[0])}
+ try{const cfg=await api('/api/config');csrf=cfg.csrf_token;await refresh();openFromLocation()}
  catch(e){$('notice').textContent='Could not open the queue. Reload the page to try again.'}
 }
 init();
+
+function openFromLocation(){
+ const wanted=new URLSearchParams(location.hash.slice(1)).get('kasus');
+ const item=wanted===null ? (cases.find(c=>!decisions.has(c.key)) || cases[0]) : cases.find(c=>c.key===wanted);
+ show(item,wanted!==null && !item);
+}
+window.addEventListener('hashchange',()=>{if(!busy)openFromLocation()});

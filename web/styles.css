@@ -241,3 +241,21 @@ dialog::backdrop {background:#102c2888}
   .documents-table .document-updated,.documents-table .document-review {text-align:right}
   .workspace-intro {flex-direction:row; align-items:center; flex-wrap:wrap}
 }
+
+.batch-desk {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px;margin:0 0 20px;padding:23px 26px;background:#f1f6fa;color:#17354a;border:1px solid #cbdce6;border-radius:14px;box-shadow:none}
+.batch-desk[hidden],.batch-desk [hidden]{display:none}
+.batch-desk h2{font-size:.94rem;color:#33566b;margin:0 0 4px;font-weight:600}
+#desk-saved{font-size:clamp(1.3rem,2.3vw,2rem);font-weight:650;line-height:1.15;margin:0 0 12px;letter-spacing:-.025em}
+#desk-progress{display:block;width:min(310px,100%);height:5px;accent-color:#176889}
+.desk-review{display:grid;gap:9px;justify-items:start}.desk-review span{font-size:.92rem;font-weight:600}
+.row-nik-link{display:block;font-weight:650;color:#07557c;margin-top:6px;text-underline-offset:3px}
+@media(max-width:680px){.batch-desk{grid-template-columns:1fr;gap:16px;padding:17px}.desk-review{display:flex;align-items:center;justify-content:space-between;gap:12px}#desk-saved{font-size:1.45rem}}
+
+.family-summary{border:1px solid #cbd9e2;background:#fff;border-radius:12px;padding:18px 22px;margin:16px 0}
+.family-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.family-top h3{font-size:.84rem;color:#50687b;margin:0;font-weight:600}.family-top p{font-size:1.2rem;font-weight:650;margin:4px 0 0}
+.family-list{overflow-x:auto}.family-list table{width:100%;border-collapse:collapse;text-align:left;font-size:.94rem}
+.family-list th{background:#edf3f6;font-size:.82rem}.family-list td,.family-list th{padding:9px 12px;border-bottom:1px solid #dae3e9;white-space:nowrap}
+.numeric-id,#family-card-number,.signoff-label{font-variant-numeric:tabular-nums}.signoff-label{color:#526a7c;font-size:.86rem}
+#extraction-area:not(.all-evidence) .routine-evidence{display:none}#show-field-checks{margin:3px 0 12px}
+@media(max-width:650px){.family-summary{padding:13px}.family-top{align-items:flex-start;flex-direction:column}.family-list th,.family-list td{padding:7px}}

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0 · 2026-11-25
+
+The batch shows saved cards and NIKs awaiting a decision separately. Reviewers can open the printed row directly, adjust zoom or contrast, and reopen the saved decision. Document filters stay with the selected batch after refresh. The document list keeps focus during background checks when its contents have not changed.
+
 ## 0.4.4 · 2026-11-24
 
 The original image now stays still in **Fit to view** at fractional browser zoom. Adjusting contrast or grayscale changes the image filter without recalculating its size. Upload thumbnails keep their place while the reference, file list or processing status changes.

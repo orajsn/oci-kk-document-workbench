@@ -153,6 +153,34 @@
   function modeLabel(mode) {
     return {demo: "Synthetic example", reference: "Recorded sample", oci: state.currentModelLabel || "OCI Generative AI"}[mode] || String(mode || "Unknown");
   }
+  function batchStorageKey() {
+    return "kk.last-upload.v1." + (state.config.runtime || "local");
+  }
+  function rememberBatch() {
+    if (!state.config) return;
+    try {
+      if (state.latestBatchIds.length) {
+        sessionStorage.setItem(batchStorageKey(), JSON.stringify({
+          ids: state.latestBatchIds, selected: $("list-scope").value === "batch"
+        }));
+      } else {
+        sessionStorage.removeItem(batchStorageKey());
+      }
+    } catch { /* The in-memory batch still works when tab storage is unavailable. */ }
+  }
+  function restoreBatch() {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(batchStorageKey()));
+      const jobId = /^(?:[0-9a-f]{32}|[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})$/i;
+      if (!Array.isArray(saved?.ids) || !saved.ids.length || saved.ids.length > batchMaxFiles ||
+          !saved.ids.every(id => typeof id === "string" && jobId.test(id))) return;
+      state.latestBatchIds = [...new Set(saved.ids)];
+      if (saved.selected === true) {
+        $("list-scope").querySelector('option[value="batch"]').disabled = false;
+        $("list-scope").value = "batch";
+      }
+    } catch { /* A new tab or an invalid receipt starts with the full document list. */ }
+  }
   function checks() {
     const all = [];
     for (const item of state.detail?.validation?.issues || []) {
@@ -211,6 +239,8 @@
     const matching = state.draft.field_evidence.filter((item) => normalizePath(item.path) === normalizePath(path));
     const kind = evidence.status === "READABLE" ? " readable" : ["UNREADABLE", "CROPPED", "AMBIGUOUS", "NOT_REVIEWED"].includes(evidence.status) ? " warning" : "";
     const node = el("select", `evidence-label evidence-select${kind}`);
+    node.classList.toggle("routine-evidence", matching.length === 1 && ["NOT_REVIEWED","READABLE"].includes(evidence.status));
+
     node.setAttribute("aria-label", `Readability of ${humanPath(path)}`);
     if (matching.length > 1) { const option = el("option", "", `Review ${matching.length} notes`); option.value = ""; option.disabled = true; node.append(option); node.classList.add("warning"); }
     for (const status of state.config.evidence_statuses || Object.keys(evidenceLabels)) {
@@ -375,9 +405,49 @@
     const index = state.detailOrder.indexOf(state.selectedId), next = state.detailOrder[index + offset];
     if (next) requestNavigation(() => loadDetail(next));
   }
+  function caseUrl(job) {
+    const target = new URL("/nik-review", location.origin);
+    target.searchParams.set("job", job.id);
+    target.hash = "kasus=" + job.nik_first_open_key;
+    return target.pathname + target.search + target.hash;
+  }
+
+  function renderBatchDesk(jobs, batch) {
+    const desk = $("batch-desk");
+    const inCloud = state.config?.runtime === "private_cloud";
+    desk.hidden = !inCloud || !jobs.length;
+    if (desk.hidden) return;
+    const total = batch ? state.latestBatchIds.length : jobs.length;
+    const saved = jobs.filter(hasResult).length;
+    $("batch-heading").textContent = batch ? "Last upload" : "Documents in this list";
+    $("desk-saved").textContent = saved + " of " + total + " cards saved";
+    if (batch && jobs.length) {
+      const first = jobs[0].case_id || "";
+      const prefix = first.replace(/-\d{3}$/, "");
+      if (prefix && jobs.every(job => job.case_id === prefix || (job.case_id || "").replace(/-\d{3}$/, "") === prefix)) {
+        $("batch-heading").textContent += " · " + prefix;
+      }
+    }
+    $("desk-progress").max = total;
+    $("desk-progress").value = saved;
+    const known = jobs.length === total && jobs.every(job => Number.isInteger(job.nik_open_count));
+    const pending = jobs.reduce((n, job) => n + (job.nik_open_count || 0), 0);
+    $("desk-open").textContent = known ? pending + (pending === 1 ? " NIK awaiting review" : " NIKs awaiting review") : "NIK count unavailable";
+    const next = jobs.filter(job => job.nik_open_count > 0 && job.nik_first_open_key)
+      .sort((a,b) => a.case_id.localeCompare(b.case_id, undefined, {numeric: true}))[0];
+    const link = $("batch-open-nik");
+    link.hidden = !next;
+    if (next) {
+      link.href = caseUrl(next);
+      link.textContent = "Review a NIK";
+    } else {
+      link.removeAttribute("href");
+    }
+  }
   function renderActivity() {
     const batch = $("list-scope").value === "batch";
     const jobs = batch ? state.jobs.filter(job => state.latestBatchIds.includes(job.id)) : state.jobs;
+    renderBatchDesk(jobs, batch);
     const queued = jobs.filter(job => activityStatus(job) === "QUEUED").length;
     const running = jobs.filter(job => job.status === "PROCESSING").length;
     const failed = jobs.filter(job => activityStatus(job) === "FAILED").length;
@@ -392,14 +462,16 @@
   function renderJobList() {
     const jobs = filteredJobs();
     renderActivity();
+    const inBatch = $("list-scope").value === "batch";
+    const scopedJobs = inBatch ? state.jobs.filter(job => state.latestBatchIds.includes(job.id)) : state.jobs;
     const pageSize = Number($("page-size").value) || 25, pages = Math.max(1, Math.ceil(jobs.length / pageSize));
     state.page = Math.min(Math.max(1, state.page), pages);
     const start = (state.page - 1) * pageSize, shown = jobs.slice(start, start + pageSize);
-    $("job-count").textContent = String(state.jobs.length);
-    $("stat-total-value").textContent = String(state.jobs.length);
-    $("stat-processing-value").textContent = String(state.jobs.filter(job => ["QUEUED", "PROCESSING"].includes(activityStatus(job))).length);
-    $("stat-review-value").textContent = String(state.jobs.filter(job => job.status === "NEEDS_REVIEW").length);
-    $("stat-reviewed-value").textContent = String(state.jobs.filter(job => job.status === "ACCEPTED").length);
+    $("job-count").textContent = String(scopedJobs.length);
+    $("stat-total-value").textContent = String(scopedJobs.length);
+    $("stat-processing-value").textContent = String(scopedJobs.filter(job => ["QUEUED", "PROCESSING"].includes(activityStatus(job))).length);
+    $("stat-review-value").textContent = String(scopedJobs.filter(job => job.status === "NEEDS_REVIEW").length);
+    $("stat-reviewed-value").textContent = String(scopedJobs.filter(job => job.status === "ACCEPTED").length);
     const batchOption = $("list-scope").querySelector('option[value="batch"]');
     batchOption.disabled = !state.latestBatchIds.length;
     batchOption.textContent = state.latestBatchIds.length ? `Last upload (${state.latestBatchIds.length})` : "Last upload";
@@ -408,7 +480,7 @@
     $("list-options").querySelector("summary").textContent = optionsActive ? "Filter and sort · active" : "Filter and sort";
     $("list-scope-description").textContent = batchView ? `Upload ${state.latestBatchCase || "this session"}.` : "Showing up to 500 recent documents.";
     for (const button of document.querySelectorAll("[data-stat-filter]")) {
-      const active = !batchView && !$("job-search").value.trim() && button.dataset.statFilter === $("status-filter").value;
+      const active = !$("job-search").value.trim() && button.dataset.statFilter === $("status-filter").value;
       button.classList.toggle("is-active", active); button.setAttribute("aria-pressed", String(active));
     }
     const focusedId = document.activeElement?.dataset?.jobId;
@@ -427,11 +499,17 @@
       const members = el("td", "document-members", Number.isInteger(job.member_count) && job.member_count >= 0 ? job.member_count : "—");
       if (!Number.isInteger(job.member_count)) members.title = hasResult(job) ? "Open the card to see its members." : "Available after extraction.";
       const review = el("td", "document-review");
-      review.append(hasResult(job) ? badge(job.status === "ACCEPTED" ? "ACCEPTED" : "NEEDS_REVIEW") : el("span", "cell-pending", "Awaiting result"));
+      const signoff = job.status === "ACCEPTED" ? "Confirmed" : "Awaiting sign-off";
+      review.append(el("span","signoff-label",hasResult(job) ? signoff : "—"));
       const updated = el("td", "document-updated", shortDate(job.updated_at || job.created_at) || "—");
       const action = el("td", "document-open"), button = el("button", "button button-secondary open-document", hasResult(job) ? "Open result" : "View status");
       button.type = "button"; button.dataset.jobId = job.id; button.setAttribute("aria-label", `Open ${job.case_id || "document"}, ${job.filename || "image"}`);
       button.addEventListener("click", () => requestNavigation(() => openDocument(job.id))); action.append(button);
+      if (job.nik_open_count > 0 && job.nik_first_open_key) {
+        const openCase = el("a", "row-nik-link", job.nik_open_count + " NIK to review");
+        openCase.href = caseUrl(job);
+        review.append(openCase);
+      }
       row.append(documentCell, processing, members, review, updated, action); list.append(row);
       if (focusedId === job.id) button.focus({ preventScroll: true });
     }
@@ -450,19 +528,21 @@
     if (!silent) { visible("queue-loading", true); visible("queue-error", false); visible("queue-empty", false); }
     $("refresh-jobs").disabled = true;
     const requestRevision = state.jobsRevision;
+    let redraw = false;
     try {
       const data = await api("/api/jobs");
       if (!Array.isArray(data.jobs)) throw new ApiError("Could not read the document list. Reload the page.");
       if (state.jobsRevision !== requestRevision) { visible("queue-error", false); setConnection(true); return; }
       const signature = JSON.stringify(data.jobs);
       state.jobs = data.jobs;
-      if (signature !== state.jobsSignature || !silent) { state.jobsSignature = signature; renderJobList(); }
+      redraw = signature !== state.jobsSignature || !silent;
+      state.jobsSignature = signature;
       visible("queue-error", false); setConnection(true);
     } catch (error) {
       setConnection(false);
       if (!silent || !state.jobs.length) { visible("queue-error", true); visible("queue-empty", false); }
       if (!silent) announce(error.message);
-    } finally { state.loadingJobs = false; visible("queue-loading", false); $("refresh-jobs").disabled = false; if (!$("queue-error").hidden && !state.jobs.length) visible("queue-empty", false); else renderJobList(); }
+    } finally { state.loadingJobs = false; visible("queue-loading", false); $("refresh-jobs").disabled = false; if (!$("queue-error").hidden && !state.jobs.length) visible("queue-empty", false); else if (redraw) renderJobList(); }
   }
   function updateListJob(job) {
     state.jobsRevision += 1;
@@ -502,11 +582,29 @@
     };
     poll();
   }
+  function renderFamilySummary(doc) {
+    const panel = $("family-summary");
+    panel.hidden = !doc;
+    const body = $("family-rows");
+    body.replaceChildren();
+    if (!doc) return;
+    $("family-head").textContent = doc.household?.head_name || "Head of household unavailable";
+    $("family-card-number").textContent = doc.household?.kk_number_raw ? "No. KK  " + doc.household.kk_number_raw : "";
+    for (const member of doc.members || []) {
+      const row = el("tr");
+      for (const key of ["row_number", "full_name", "nik_raw", "birth_date_raw"]) {
+        const value = member[key];
+        row.append(el("td", key === "nik_raw" ? "numeric-id" : "", value === null || value === undefined || value === "" ? "—" : String(value)));
+      }
+      body.append(row);
+    }
+  }
   function renderDetail(data) {
     if (!data.job) throw new ApiError("Incomplete document details. Reload the page.");
     const job = { ...data.job, result_available: !!data.extraction, member_count: Array.isArray(data.extraction?.members) ? data.extraction.members.length : null }; state.detail = data; state.draft = data.extraction ? clone(data.extraction) : null;
     state.conflict = false; resetDirty();
     visible("welcome", false); visible("detail-loading", false); visible("detail-error", false); visible("detail", true); visible("conflict-panel", false); visible("review-message", false);
+    renderFamilySummary(data.extraction);
     refreshNikRoute(job.id);
     $("detail-case").textContent = job.case_id; $("detail-filename").textContent = job.filename;
     $("detail-status").replaceChildren(needsDispatchCheck(job) ? el("span", "status-badge status-failed", "Check delivery") : badge(job.status)); $("detail-version").textContent = `Version ${job.version}`;
@@ -804,7 +902,7 @@
         const data = await api("/api/jobs", { method: "POST", body: {filename: row.file.name, content_base64: content, case_id: row.caseId, idempotency_key: row.key, mode} });
         if (!data.job?.id) throw new ApiError("The service has not returned a job ID.");
         row.jobId = data.job.id; row.status = "submitted"; row.message = "";
-        if (!state.latestBatchIds.includes(row.jobId)) state.latestBatchIds.push(row.jobId); updateListJob(data.job);
+        if (!state.latestBatchIds.includes(row.jobId)) state.latestBatchIds.push(row.jobId); rememberBatch(); updateListJob(data.job);
       } catch (error) {
         const definitive = error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 409 && error.status !== 429;
         row.status = definitive ? "rejected" : "uncertain";
@@ -829,6 +927,11 @@
     for (const mode of config.modes) {
       const label = cloud && mode.id === "oci" ? `${state.currentModelLabel} (OCI GenAI)` : modeLabel(mode.id);
       const option = el("option", "", `${label}${mode.available ? "" : " · unavailable"}`); option.value = mode.id; option.disabled = !mode.available; select.append(option);
+    }
+    const availableModes = config.modes.filter(mode => mode.available);
+    if (cloud && availableModes.length === 1) {
+      select.value = availableModes[0].id;
+      select.dataset.singleMode = "true";
     }
     const available = config.modes.some((item) => item.available);
     const live = config.live_oci_enabled === true;
@@ -869,7 +972,7 @@
   async function initialize() {
     visible("global-message", false);
     try {
-      const config = await api("/api/config"); configure(config); setConnection(true);
+      const config = await api("/api/config"); configure(config); restoreBatch(); setConnection(true);
       if (config.runtime === "private_cloud" || config.capabilities?.processing_status === true) { renderProcessingStatus("UNKNOWN"); loadProcessingStatus(true); }
       else { visible("processing-readiness", false); visible("upload-processing-readiness", false); }
     } catch (error) { state.config = null; $("new-upload").disabled = true; $("welcome-upload").disabled = true; setConnection(false); showGlobal(error.message, true); }
@@ -930,12 +1033,14 @@
       $("list-options").querySelector("summary").focus();
     }
   });
+  window.addEventListener("pagehide", rememberBatch);
+  $("list-scope").addEventListener("change", rememberBatch);
   $("clear-filters").addEventListener("click", resetOverviewFilters);
-  for (const button of document.querySelectorAll("[data-stat-filter]")) button.addEventListener("click", () => { $("job-search").value = ""; $("list-scope").value = "all"; $("status-filter").value = button.dataset.statFilter; state.page = 1; renderJobList(); });
+  for (const button of document.querySelectorAll("[data-stat-filter]")) button.addEventListener("click", () => { $("job-search").value = ""; $("status-filter").value = button.dataset.statFilter; state.page = 1; renderJobList(); });
   $("back-to-overview").addEventListener("click", () => requestNavigation(showOverview));
   $("previous-document").addEventListener("click", () => moveDocument(-1));
   $("next-document").addEventListener("click", () => moveDocument(1));
-  $("view-uploaded-documents").addEventListener("click", () => { closeUpload(); requestNavigation(() => { $("list-scope").value = "batch"; $("status-filter").value = ""; $("job-search").value = ""; state.page = 1; state.overviewScroll = 0; showOverview(); }); });
+  $("view-uploaded-documents").addEventListener("click", () => { closeUpload(); requestNavigation(() => { $("list-scope").value = "batch"; rememberBatch(); $("status-filter").value = ""; $("job-search").value = ""; state.page = 1; state.overviewScroll = 0; showOverview(); }); });
   $("toggle-data-width").addEventListener("click", () => { state.dataWide = !state.dataWide; $("detail").querySelector(".review-workspace").classList.toggle("data-wide", state.dataWide); $("toggle-data-width").setAttribute("aria-pressed", String(state.dataWide)); $("toggle-data-width").textContent = state.dataWide ? "Show original image" : "Expand table"; requestAnimationFrame(() => { if (!state.dataWide) renderImage(); }); });
   $("detail-retry").addEventListener("click", () => { if (state.selectedId && state.config) loadDetail(state.selectedId); else initialize(); });
   $("reload-detail").addEventListener("click", () => requestNavigation(() => loadDetail(state.selectedId)));
@@ -950,6 +1055,12 @@
   });
   $("retry-job").addEventListener("click", retryJob); $("save-review").addEventListener("click", saveReview);
   $("review-comment").addEventListener("input", markDirty); $("review-decision").addEventListener("change", markDirty);
+  $("show-field-checks").addEventListener("click", () => {
+    const expanded = $("show-field-checks").getAttribute("aria-pressed") !== "true";
+    $("extraction-area").classList.toggle("all-evidence", expanded);
+    $("show-field-checks").setAttribute("aria-pressed", String(expanded));
+    $("show-field-checks").textContent = expanded ? "Hide routine checks" : "Show field checks";
+  });
   $("member-group").addEventListener("change", renderMembers);
   $("layout-family").addEventListener("change", () => { if (state.draft) { state.draft.layout_family = $("layout-family").value; markDirty(); } });
   for (const name of ["household", "members", "flags"]) {

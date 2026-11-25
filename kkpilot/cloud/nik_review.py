@@ -24,14 +24,17 @@ def listing(repo, job_id=None):
     if job_id is not None:binds['filter_job']=job_id
     sql = """SELECT c.field_key,c.sample_alias,c.member_row,c.ai_nik,c.topic,c.flags_json,
         c.image_width,c.structural,c.legacy,e.revision,e.action,e.corrected_nik,e.operator_name,
-        SYS_EXTRACT_UTC(e.decided_at)""" + FROM + LATEST + "WHERE " + repo._scope + restriction + " ORDER BY c.sample_alias,c.member_row"
+        SYS_EXTRACT_UTC(e.decided_at), c.job_id, j.case_id,
+        (SELECT CASE WHEN COUNT(*)=1 THEN MAX(DBMS_LOB.SUBSTR(m.full_name,256,1)) END
+         FROM KK_OWNER.KK_EXTRACTIONS x JOIN KK_OWNER.KK_MEMBERS m ON m.extraction_id=x.extraction_id
+         WHERE x.job_id=c.job_id AND x.job_version=c.original_job_version AND m.row_number=c.member_row)""" + FROM + LATEST + "WHERE " + repo._scope + restriction + " ORDER BY c.sample_alias,c.member_row"
     with repo._session() as con, con.cursor() as cur:
         cur.execute(sql, binds)
         items = []
-        for key,sid,row,nik,topic,flags,width,struct,legacy,rev,action,value,operator,when in cur:
+        for key,sid,row,nik,topic,flags,width,struct,legacy,rev,action,value,operator,when,job,reference,member_name in cur:
             decision = None if rev is None else dict(action=action,value=value,operator=operator,time=_timestamp(when))
             url = "/api/nik-review/" + key
-            items.append(dict(key=key,id=f"{sid}-r{row}",doc=sid,row=row,stored=nik,topic=topic,
+            items.append(dict(key=key,job=job,reference=reference,member_name=member_name,id=f"{sid}-r{row}",doc=sid,row=row,stored=nik,topic=topic,
                               reasons=json.loads(flags),width=width,structural=bool(struct),legacy=bool(legacy),
                               image=url+"/crop",context=url+"/context",revision=rev or 0,decision=decision))
     return items
